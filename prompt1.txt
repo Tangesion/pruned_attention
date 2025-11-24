@@ -1,0 +1,83 @@
+You are given a directed graph that represents a large codebase dependency network. Each node in the graph is a module, and each directed edge (u, v) indicates that module u depends on module v. The graph may contain cycles, and there may be multiple strongly connected components (SCCs) of different sizes.
+
+In addition to the graph structure, you are given a list of “critical” modules that must be built in order for the system to function. However, some of these modules may depend (directly or indirectly) on other modules, and some dependencies may form long chains or complicated subgraphs with many back edges and cross edges. Your task is to determine an order in which to build all required modules such that for every module in the order, all of its dependencies in the reduced dependency graph are built before it, and such that cycles are handled by collapsing them into strongly connected components.
+
+Formally, you are given:
+- An integer n, the total number of modules labeled from 0 to n - 1.
+- A list of directed edges edges where each edge is represented as a pair [u, v], indicating there is a directed edge from u to v (module u depends on module v).
+- A list of integers required that contains the labels of modules that are required to be built.
+
+You need to:
+1. Consider the induced subgraph that contains:
+   - All modules in required, and
+   - All modules that are dependencies (directly or indirectly) of any module in required.
+2. Collapse each strongly connected component in this induced subgraph into a single meta-node. Inside a strongly connected component, the build order of modules can be arbitrary, but between different components you must respect the topological order of the condensed DAG.
+3. Return any valid build order of all modules in the induced subgraph (not only modules in required) such that:
+   - For every directed edge (u, v) in the induced subgraph, v appears before u in the returned order.
+   - If the induced subgraph contains cycles, you are allowed to output all nodes of a strongly connected component consecutively in any internal order, as long as the SCCs themselves respect a topological order in the DAG of components.
+4. If it is impossible to build the required modules due to contradictions (for example, if the required set is empty, or if some required module index is out of range), return an empty list.
+
+Constraints:
+- 1 <= n <= 10^5
+- 0 <= edges.length <= 2 * 10^5
+- 0 <= u, v < n
+- 1 <= required.length <= n
+- All elements in required are distinct.
+- The graph may contain self-loops and multiple edges between the same pair of nodes. Self-loops should not prevent you from computing SCCs, but they indicate that the node is trivially its own strongly connected component in the absence of other edges.
+- The induced subgraph formed by required and all of their dependencies can, in the worst case, contain all n nodes and all edges.
+
+Your solution must be efficient both in time and space. A naive approach that repeatedly runs a depth-first search from each required node may be too slow for the largest inputs. You should:
+- Use an algorithm such as Kosaraju’s algorithm or Tarjan’s algorithm to compute strongly connected components in O(n + m) time, where m is the number of edges in the induced subgraph.
+- Build the condensation graph (a DAG where each node represents an SCC) and perform a topological sort on this DAG.
+- Be careful to only include nodes that are actually reachable from at least one required module; nodes that are not reachable from the required set should be ignored.
+- Ensure that your implementation handles large graphs without recursion depth issues. If you use recursion for DFS, consider the recursion limits of your environment, or implement an iterative version of the algorithm.
+
+Return:
+- A list of integers representing a valid build order for all modules in the induced subgraph, including both required modules and their dependencies.
+- The order must satisfy the dependency constraints described above.
+- If multiple valid orders exist, you may return any of them.
+
+Example 1:
+Input:
+n = 6
+edges = [[0,1],[1,2],[2,0],[2,3],[3,4],[4,5]]
+required = [0,3]
+
+One possible valid output:
+[2,1,0,3,4,5]
+
+Explanation:
+- Nodes 0,1,2 form a cycle, so they can be built in any order among themselves, but all must appear before node 3 because there is a path 0 -> 1 -> 2 -> 3.
+- Node 4 depends on 5 or 5 depends on 4 depending on edges; they may or may not form another SCC. In any case, the topological order of SCCs must be respected.
+- The returned list includes all nodes required for building 0 and 3, and satisfies all dependency relations.
+
+Example 2:
+Input:
+n = 4
+edges = [[0,1],[1,2],[2,3]]
+required = [3]
+
+Output:
+[0,1,2,3]
+
+Explanation:
+- The required module is 3. Its dependencies are 2, 1, and 0, forming a simple chain. A natural build order is 0,1,2,3.
+
+Example 3:
+Input:
+n = 3
+edges = []
+required = [1]
+
+Output:
+[1]
+
+Explanation:
+- There are no dependencies. You only need to build module 1.
+
+Task:
+Implement a function in Python with the following signature:
+
+def build_order(n: int, edges: List[List[int]], required: List[int]) -> List[int]:
+
+Use Tarjan’s algorithm or Kosaraju’s algorithm to compute SCCs, construct the condensation graph, and then produce any valid build order for the required modules and their dependencies. Aim for O(n + m) time complexity and O(n + m) space complexity, where m is the number of edges.
