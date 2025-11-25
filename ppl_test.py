@@ -119,11 +119,11 @@ def ppl_eval(model, tokenizer, test_loader=None, dataset='wikitext2', model_seq_
 batch_size = 2
 model_seq_len = 2048
 
-dataset_name = 'lambada'  
+dataset_name = 'wikitext2'  
 ppl_original = ppl_eval(original_model, tokenizer, dataset=dataset_name, model_seq_len=model_seq_len, batch_size=batch_size, device="cuda")
 
 
-model = apply_compression_to_model(original_model)
+model = apply_compression_to_model(original_model, quant_mode='int')
 
 small_state = torch.load(f"./compressed_llama_distilled_topk_wo_sink/small_attn_weights.pt", map_location="cpu")
 base_state = model.state_dict()

@@ -110,7 +110,7 @@ def get_compression_indices(
     return keep_indices # [Num_KV_Heads, Compressed_Dim]
 
 
-def apply_compression_to_model(model, indices_path="indices.json"):
+def apply_compression_to_model(model, indices_path="indices.json", quant_mode=None):
     print(f"Loading indices from {indices_path}...")
     with open(indices_path, 'r') as f:
         indices_data = json.load(f)
@@ -126,7 +126,8 @@ def apply_compression_to_model(model, indices_path="indices.json"):
         compressed_attn = CompressedLlamaAttention(
             config, 
             layer.self_attn, 
-            group_keep_indices=keep_indices
+            group_keep_indices=keep_indices,
+            mode=quant_mode
         ).to(model.device)
         
         model.model.layers[i].self_attn = compressed_attn
