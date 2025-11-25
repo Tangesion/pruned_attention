@@ -1,0 +1,7 @@
+# Core dependencies for the Pruned Attention project
+
+torch
+transformers
+datasets
+tqdm
+accelerate

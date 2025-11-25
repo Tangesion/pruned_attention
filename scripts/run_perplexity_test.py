@@ -1,14 +1,19 @@
 import torch
-from transformers import AutoTokenizer, LlamaForCausalLM
+import os
+import sys
+from transformers import AutoTokenizer
 from datasets import load_dataset
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import math
-
-from prune import apply_compression_to_model
-    
 from peft import PeftModel
 import numpy as np
+
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from src.pruned_attention.modeling_llama import LlamaForCausalLM
+from src.pruned_attention.calibration import apply_compression_to_model
 
 base_model_path = "/home/tgx/data/models/Llama-3-8B-Instruct"
 adapter_model_path = "./lora_all_mixed/final_checkpoint" 

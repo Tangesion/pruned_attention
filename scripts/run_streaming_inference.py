@@ -1,46 +1,26 @@
-
-# filepath: /home/tgx/data/projects/pruned_attention/test_train.py
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, StoppingCriteria, StoppingCriteriaList
-from prune import apply_compression_to_model
-from peft import PeftModel
-from Llama import KVWithSmallKCache
+import os
+import sys
+from transformers import AutoTokenizer, StoppingCriteria, StoppingCriteriaList
 
-BASE_MODEL_ID = "/home/tgx/data/models/Llama-3-8B-Instruct"
-DISTILLED_DIR = "./compressed_llama_distilled_topk"
-adapter_model_path = "./lora_all_mixed/final_checkpoint"
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from src.pruned_attention.modeling_llama import LlamaForCausalLM
+from src.pruned_attention.calibration import apply_compression_to_model
+model_name = "/home/tgx/data/models/Llama-3-8B-Instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
-base_model = AutoModelForCausalLM.from_pretrained(
-    BASE_MODEL_ID,
-    torch_dtype=torch.bfloat16,
-    device_map="auto",
-    attn_implementation="eager"
-)
-config = base_model.config
-model = apply_compression_to_model(base_model)
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = LlamaForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype="auto", attn_implementation="eager")
+#apply_compression_to_model(model)
 
-small_state = torch.load(
-    "./compressed_llama_distilled_topk_wo_sink/small_attn_weights.pt",
-    map_location="cpu"
-)
-base_state = model.state_dict()
-
-for name, param in small_state.items():
-    name = "model." + name
-    if name in base_state and base_state[name].shape == param.shape:
-        base_state[name] = param
-
-model.load_state_dict(base_state)
-
-lora_model = PeftModel.from_pretrained(model, adapter_model_path)
-lora_model.eval()
 
 with open("prompt1.txt", "r", encoding="utf-8") as f:
     prompt = f.read()
 
 inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
+
+
 input_len = inputs["input_ids"].shape[1]
 
 
@@ -70,13 +50,12 @@ class StreamTokens(StoppingCriteria):
 
 
 streamer = StreamTokens(tokenizer, input_len)
-kv_cache = KVWithSmallKCache(config=config)
-output = lora_model.generate(
+
+output = model.generate(
     **inputs,
     max_new_tokens=256,
     use_cache=True,
     do_sample=True,
-    past_key_values=kv_cache,
     temperature=0.7,
     top_p=0.9,
     repetition_penalty=1.2,

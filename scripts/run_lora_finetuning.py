@@ -1,10 +1,16 @@
 import os
+import sys
 import torch
+
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from transformers import (
     AutoTokenizer, 
     TrainingArguments, 
     Trainer, 
-    DataCollatorForLanguageModeling
+    DataCollatorForLanguageModeling,
+    AutoModelForCausalLM
 )
 from datasets import load_dataset, concatenate_datasets
 from peft import (
@@ -14,8 +20,8 @@ from peft import (
     PeftModel
 )
 
-from transformers import AutoModelForCausalLM
-from prune import apply_compression_to_model
+from src.pruned_attention.modeling_llama import LlamaForCausalLM
+from src.pruned_attention.calibration import apply_compression_to_model
 
 model_name = "/home/tgx/data/models/Llama-3-8B-Instruct"
 output_dir = "./lora_all_mixed" 
