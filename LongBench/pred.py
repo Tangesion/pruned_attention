@@ -13,7 +13,7 @@ import torch.multiprocessing as mp
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-compress"], help="Model name for evaluation")
+    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-compress", "llama3-8b-h2o"], help="Model name for evaluation")
     parser.add_argument('--e', action='store_true', help="Evaluate on LongBench-E")
     return parser.parse_args(args)
 
@@ -29,7 +29,7 @@ def build_chat(tokenizer, prompt, model_name):
         conv.append_message(conv.roles[0], prompt)
         conv.append_message(conv.roles[1], None)
         prompt = conv.get_prompt()
-    elif "llama2" in model_name:
+    elif "llama" in model_name:
         prompt = f"[INST]{prompt}[/INST]"
     elif "xgen" in model_name:
         header = (
@@ -70,24 +70,60 @@ def get_pred(rank, world_size, data, max_length, max_gen, prompt_format, dataset
         else:
             input = tokenizer(prompt, truncation=False, return_tensors="pt").to(device)
         context_length = input.input_ids.shape[-1]
-        if dataset == "samsum": # prevent illegal output on samsum (model endlessly repeat "\nDialogue"), might be a prompting issue
-            output = model.generate(
-                **input,
-                max_new_tokens=max_gen,
-                num_beams=1,
-                do_sample=False,
-                temperature=1.0,
-                min_length=context_length+1,
-                eos_token_id=[tokenizer.eos_token_id, tokenizer.encode("\n", add_special_tokens=False)[-1]],
-            )[0]
+        
+        if "compress" in model_name:
+            from src.pruned_attention.attention import KVWithSmallKCache
+            config = model.config
+            kv_cache = KVWithSmallKCache(config=config)
+            if dataset == "samsum": # prevent illegal output on samsum (model endlessly repeat "\nDialogue"), might be a prompting issue
+                output = model.generate(
+                    **input,
+                    max_new_tokens=max_gen,
+                    past_key_values=kv_cache,
+                    num_beams=1,
+                    do_sample=False,
+                    temperature=1.0,
+                    min_length=context_length+1,
+                    eos_token_id=[tokenizer.eos_token_id, tokenizer.encode("\n", add_special_tokens=False)[-1]],
+                )[0]
+            else:
+                output = model.generate(
+                    **input,
+                    max_new_tokens=max_gen,
+                    past_key_values=kv_cache,
+                    num_beams=1,
+                    do_sample=False,
+                    temperature=1.0,
+                )[0]
         else:
-            output = model.generate(
-                **input,
-                max_new_tokens=max_gen,
-                num_beams=1,
-                do_sample=False,
-                temperature=1.0,
-            )[0]
+            if dataset == "samsum": # prevent illegal output on samsum (model endlessly repeat "\nDialogue"), might be a prompting issue
+                output = model.generate(
+                    **input,
+                    max_new_tokens=max_gen,
+                    num_beams=1,
+                    do_sample=False,
+                    temperature=1.0,
+                    min_length=context_length+1,
+                    eos_token_id=[tokenizer.eos_token_id, tokenizer.encode("\n", add_special_tokens=False)[-1]],
+                )[0]
+                if "h2o" in model_name:
+                    # Reset H2O Attention internal state after each generation
+                    for module in model.modules():
+                        if hasattr(module, '_reset_masks'):
+                            module._reset_masks()
+            else:
+                output = model.generate(
+                    **input,
+                    max_new_tokens=max_gen,
+                    num_beams=1,
+                    do_sample=False,
+                    temperature=1.0,
+                )[0]
+                if "h2o" in model_name:
+                    # Reset H2O Attention internal state after each generation
+                    for module in model.modules():
+                        if hasattr(module, '_reset_masks'):
+                            module._reset_masks()
         pred = tokenizer.decode(output[context_length:], skip_special_tokens=True)
         pred = post_process(pred, model_name)
         with open(out_path, "a", encoding="utf-8") as f:
@@ -112,6 +148,42 @@ def load_model_and_tokenizer(path, model_name, device):
         replace_llama_attn_with_flash_attn()
         tokenizer = LlamaTokenizer.from_pretrained(path)
         model = LlamaForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16).to(device)
+    elif "llama3-8b-instruct" in model_name:
+        tokenizer = AutoTokenizer.from_pretrained(path)
+        model = LlamaForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16).to(device)
+    elif "llama3-8b-compress" in model_name:
+        import sys
+        sys.path.append("..")
+        from src.pruned_attention.calibration import apply_compression_to_model
+        from peft import PeftModel
+        tokenizer = AutoTokenizer.from_pretrained(path)
+        base_model = LlamaForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16, attn_implementation="eager").to(device)
+        model = apply_compression_to_model(base_model, indices_path="../indices.json", quant_mode="int")
+        DISTILLED_DIR = "../compressed_llama_distilled_topk_wo_sink"
+        LORA_DIR = "../lora_all_mixed/final_checkpoint"
+        small_state = torch.load(f"{DISTILLED_DIR}/small_attn_weights.pt", map_location="cpu")
+        base_state = base_model.state_dict()
+        for name, param in small_state.items():
+            if name in base_state and base_state[name].shape == param.shape:
+                base_state[name] = param
+        model.load_state_dict(base_state)
+        #model = PeftModel.from_pretrained(model, LORA_DIR)
+        model.eval()
+    elif "llama3-8b-h2o" in model_name:
+        import sys
+        sys.path.append("..")
+        from src.h2o_attention.attention import convert_kvcache_llama_heavy_recent
+        tokenizer = AutoTokenizer.from_pretrained(path)
+        base_model = LlamaForCausalLM.from_pretrained(
+            path,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            attn_implementation="eager"
+        ).to(device)
+        # Apply H2O Attention
+        base_model.config.heavy_ratio = 0.1
+        model = convert_kvcache_llama_heavy_recent(base_model, base_model.config)
+        model.eval()
     elif "longchat" in model_name or "vicuna" in model_name:
         from fastchat.model import load_model
         replace_llama_attn_with_flash_attn()
@@ -144,6 +216,7 @@ if __name__ == '__main__':
     if args.e:
         datasets = ["qasper", "multifieldqa_en", "hotpotqa", "2wikimqa", "gov_report", "multi_news", \
             "trec", "triviaqa", "samsum", "passage_count", "passage_retrieval_en", "lcc", "repobench-p"]
+        #datasets = ["qasper"]
     else:
         datasets = ["narrativeqa", "qasper", "multifieldqa_en", "multifieldqa_zh", "hotpotqa", "2wikimqa", "musique", \
                     "dureader", "gov_report", "qmsum", "multi_news", "vcsum", "trec", "triviaqa", "samsum", "lsht", \
@@ -158,12 +231,12 @@ if __name__ == '__main__':
         os.makedirs("pred_e")
     for dataset in datasets:
         if args.e:
-            data = load_dataset('THUDM/LongBench', f"{dataset}_e", split='test')
+            data = load_dataset('json', data_files=f"data/{dataset}_e.jsonl", split='train')
             if not os.path.exists(f"pred_e/{model_name}"):
                 os.makedirs(f"pred_e/{model_name}")
             out_path = f"pred_e/{model_name}/{dataset}.jsonl"
         else:
-            data = load_dataset('THUDM/LongBench', dataset, split='test')
+            data = load_dataset('json', data_files=f"data/{dataset}.jsonl", split='train')
             if not os.path.exists(f"pred/{model_name}"):
                 os.makedirs(f"pred/{model_name}")
             out_path = f"pred/{model_name}/{dataset}.jsonl"

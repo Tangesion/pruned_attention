@@ -16,3 +16,6 @@ lora_mixed/
 
 *.log
 .DS_Store
+
+LongBench/data*
+LongBench/pred*

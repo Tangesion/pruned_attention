@@ -1,7 +1,7 @@
 import torch
 import os
 import sys
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, LlamaForCausalLM
 from datasets import load_dataset
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
@@ -12,7 +12,6 @@ import numpy as np
 # Add project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.pruned_attention.modeling_llama import LlamaForCausalLM
 from src.pruned_attention.calibration import apply_compression_to_model
 
 base_model_path = "/home/tgx/data/models/Llama-3-8B-Instruct"
@@ -140,10 +139,11 @@ for name, param in small_state.items():
         
 model.load_state_dict(base_state)
 
-lora_model = PeftModel.from_pretrained(model, adapter_model_path)
+#lora_model = PeftModel.from_pretrained(model, adapter_model_path)
+lora_model = model
 lora_model.eval()
 
-ppl_compressed = ppl_eval(model, tokenizer, dataset=dataset_name, model_seq_len=model_seq_len, batch_size=batch_size, device="cuda")
+ppl_compressed = ppl_eval(lora_model, tokenizer, dataset=dataset_name, model_seq_len=model_seq_len, batch_size=batch_size, device="cuda")
 
 
 print(f"Compressed Model PPL on {dataset_name}: {ppl_compressed}")
