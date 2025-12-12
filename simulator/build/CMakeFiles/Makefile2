@@ -68,6 +68,7 @@ all: CMakeFiles/test_bf16_basic_ops.dir/all
 all: CMakeFiles/test_convert_sim.dir/all
 all: CMakeFiles/test_add_sim.dir/all
 all: CMakeFiles/test_multiply_sim.dir/all
+all: CMakeFiles/test_mac_unit.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -80,6 +81,7 @@ clean: CMakeFiles/test_bf16_basic_ops.dir/clean
 clean: CMakeFiles/test_convert_sim.dir/clean
 clean: CMakeFiles/test_add_sim.dir/clean
 clean: CMakeFiles/test_multiply_sim.dir/clean
+clean: CMakeFiles/test_mac_unit.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -89,12 +91,12 @@ clean: CMakeFiles/test_multiply_sim.dir/clean
 CMakeFiles/bf16_sim.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=1,2,3,4,5 "Built target bf16_sim"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target bf16_sim"
 .PHONY : CMakeFiles/bf16_sim.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/bf16_sim.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 6
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/bf16_sim.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/bf16_sim.dir/rule
@@ -115,12 +117,12 @@ CMakeFiles/bf16_sim.dir/clean:
 CMakeFiles/test_bf16_basic_ops.dir/all: CMakeFiles/bf16_sim.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_bf16_basic_ops.dir/build.make CMakeFiles/test_bf16_basic_ops.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_bf16_basic_ops.dir/build.make CMakeFiles/test_bf16_basic_ops.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=8,9 "Built target test_bf16_basic_ops"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=9,10 "Built target test_bf16_basic_ops"
 .PHONY : CMakeFiles/test_bf16_basic_ops.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_bf16_basic_ops.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_bf16_basic_ops.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_bf16_basic_ops.dir/rule
@@ -141,12 +143,12 @@ CMakeFiles/test_bf16_basic_ops.dir/clean:
 CMakeFiles/test_convert_sim.dir/all: CMakeFiles/bf16_sim.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_convert_sim.dir/build.make CMakeFiles/test_convert_sim.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_convert_sim.dir/build.make CMakeFiles/test_convert_sim.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=10,11 "Built target test_convert_sim"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=11,12 "Built target test_convert_sim"
 .PHONY : CMakeFiles/test_convert_sim.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_convert_sim.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_convert_sim.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_convert_sim.dir/rule
@@ -167,12 +169,12 @@ CMakeFiles/test_convert_sim.dir/clean:
 CMakeFiles/test_add_sim.dir/all: CMakeFiles/bf16_sim.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_add_sim.dir/build.make CMakeFiles/test_add_sim.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_add_sim.dir/build.make CMakeFiles/test_add_sim.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=6,7 "Built target test_add_sim"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=7,8 "Built target test_add_sim"
 .PHONY : CMakeFiles/test_add_sim.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_add_sim.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_add_sim.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_add_sim.dir/rule
@@ -193,12 +195,12 @@ CMakeFiles/test_add_sim.dir/clean:
 CMakeFiles/test_multiply_sim.dir/all: CMakeFiles/bf16_sim.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiply_sim.dir/build.make CMakeFiles/test_multiply_sim.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiply_sim.dir/build.make CMakeFiles/test_multiply_sim.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=12,13 "Built target test_multiply_sim"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=15,16 "Built target test_multiply_sim"
 .PHONY : CMakeFiles/test_multiply_sim.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/test_multiply_sim.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 8
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_multiply_sim.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
 .PHONY : CMakeFiles/test_multiply_sim.dir/rule
@@ -211,6 +213,32 @@ test_multiply_sim: CMakeFiles/test_multiply_sim.dir/rule
 CMakeFiles/test_multiply_sim.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiply_sim.dir/build.make CMakeFiles/test_multiply_sim.dir/clean
 .PHONY : CMakeFiles/test_multiply_sim.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/test_mac_unit.dir
+
+# All Build rule for target.
+CMakeFiles/test_mac_unit.dir/all: CMakeFiles/bf16_sim.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=13,14 "Built target test_mac_unit"
+.PHONY : CMakeFiles/test_mac_unit.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/test_mac_unit.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/test_mac_unit.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles 0
+.PHONY : CMakeFiles/test_mac_unit.dir/rule
+
+# Convenience name for target.
+test_mac_unit: CMakeFiles/test_mac_unit.dir/rule
+.PHONY : test_mac_unit
+
+# clean rule for target.
+CMakeFiles/test_mac_unit.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/clean
+.PHONY : CMakeFiles/test_mac_unit.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

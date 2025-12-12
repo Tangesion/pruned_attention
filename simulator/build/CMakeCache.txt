@@ -15,15 +15,6 @@
 ########################
 
 //Value Computed by CMake
-BF16AddSim_BINARY_DIR:STATIC=/home/tgx/projects/pruned_attention/simulator/build
-
-//Value Computed by CMake
-BF16AddSim_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-BF16AddSim_SOURCE_DIR:STATIC=/home/tgx/projects/pruned_attention/simulator
-
-//Value Computed by CMake
 BF16Simulator_BINARY_DIR:STATIC=/home/tgx/projects/pruned_attention/simulator/build
 
 //Value Computed by CMake

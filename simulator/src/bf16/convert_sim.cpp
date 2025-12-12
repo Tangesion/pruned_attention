@@ -1,14 +1,15 @@
 #include "bf16/convert_sim.h"
+#include "PE/base/PipelineInput.h"
 #include <cstdint>
-#include <cstring> // For struct packing/unpacking simulation
+#include <cstring>
 
 namespace bf16 {
 
-FP32toBF16Pipeline::FP32toBF16Pipeline() {
+BF16ConvertPipeline::BF16ConvertPipeline() {
     reset();
 }
 
-void FP32toBF16Pipeline::reset() {
+void BF16ConvertPipeline::reset() {
     stage1 = {};
     stage2 = {};
     stage3 = {};
@@ -16,14 +17,22 @@ void FP32toBF16Pipeline::reset() {
     cycle_count = 0;
 }
 
-void FP32toBF16Pipeline::decompose_fp32(uint32_t fp32_val, uint16_t& sign, uint16_t& exponent, uint16_t& mantissa) {
+bool BF16ConvertPipeline::is_active() const {
+    return stage1.is_valid || stage2.is_valid || stage3.is_valid;
+}
+
+void BF16ConvertPipeline::decompose_fp32(uint32_t fp32_val, uint16_t& sign, uint16_t& exponent, uint16_t& mantissa) {
     sign = (fp32_val >> 31) & 0x1;
     exponent = (fp32_val >> 23) & 0xFF;
     mantissa = fp32_val & 0x7FFFFF;
 }
 
-void FP32toBF16Pipeline::clock_cycle(uint32_t new_fp32, bool new_valid) {
+void BF16ConvertPipeline::clock_cycle(const PE::PipelineInput& input) {
     cycle_count++;
+
+    const auto* convert_input = dynamic_cast<const PE::ConvertInput*>(&input);
+    bool new_valid = convert_input && convert_input->valid;
+    uint32_t new_fp32 = new_valid ? convert_input->val : 0;
 
     // Stage 3: Rounding
     if (stage2.is_valid) {
@@ -60,11 +69,11 @@ void FP32toBF16Pipeline::clock_cycle(uint32_t new_fp32, bool new_valid) {
     stage1.is_valid = new_valid;
 }
 
-const std::deque<uint16_t>& FP32toBF16Pipeline::get_outputs() const {
+const std::deque<uint16_t>& BF16ConvertPipeline::get_outputs() const {
     return outputs;
 }
 
-uint16_t FP32toBF16Pipeline::pop_output() {
+uint16_t BF16ConvertPipeline::pop_output() {
     if (outputs.empty()) {
         throw std::runtime_error("No outputs available to pop.");
     }

@@ -1,20 +1,21 @@
 #ifndef MULTIPLY_SIM_H
 #define MULTIPLY_SIM_H
 
+#include "PE/base/Pipeline.h"
 #include <cstdint>
 #include <deque>
 #include <stdexcept>
 
 namespace bf16 {
 
-class BF16MultiplyPipeline {
+class BF16MultiplyPipeline final : public PE::Pipeline {
 public:
     BF16MultiplyPipeline();
-    void reset();
-    void clock_cycle(uint16_t bf16_a, uint16_t bf16_b, bool valid);
-    const std::deque<uint16_t>& get_outputs() const;
-    uint16_t pop_output();
-    bool is_active() const;
+    void reset() override;
+    void clock_cycle(const PE::PipelineInput& input) override;
+    const std::deque<uint16_t>& get_outputs() const override;
+    uint16_t pop_output() override;
+    bool is_active() const override;
     bool is_output_valid() const;
     
 private:
@@ -48,9 +49,6 @@ private:
     const uint16_t POS_INF = 0x7F80;
     const uint16_t NEG_INF = 0xFF80;
     const uint16_t NAN_VAL = 0x7FC0;
-
-    std::deque<uint16_t> outputs;
-    uint32_t cycle_count;
 };
 
 } // namespace bf16

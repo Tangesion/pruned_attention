@@ -181,6 +181,43 @@ test_multiply_sim/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiply_sim.dir/build.make CMakeFiles/test_multiply_sim.dir/build
 .PHONY : test_multiply_sim/fast
 
+#=============================================================================
+# Target rules for targets named test_mac_unit
+
+# Build rule for target.
+test_mac_unit: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_mac_unit
+.PHONY : test_mac_unit
+
+# fast build rule for target.
+test_mac_unit/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/build
+.PHONY : test_mac_unit/fast
+
+src/PE/units/MacUnit.o: src/PE/units/MacUnit.cpp.o
+.PHONY : src/PE/units/MacUnit.o
+
+# target to build an object file
+src/PE/units/MacUnit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o
+.PHONY : src/PE/units/MacUnit.cpp.o
+
+src/PE/units/MacUnit.i: src/PE/units/MacUnit.cpp.i
+.PHONY : src/PE/units/MacUnit.i
+
+# target to preprocess a source file
+src/PE/units/MacUnit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.i
+.PHONY : src/PE/units/MacUnit.cpp.i
+
+src/PE/units/MacUnit.s: src/PE/units/MacUnit.cpp.s
+.PHONY : src/PE/units/MacUnit.s
+
+# target to generate assembly for a file
+src/PE/units/MacUnit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.s
+.PHONY : src/PE/units/MacUnit.cpp.s
+
 src/bf16/add_sim.o: src/bf16/add_sim.cpp.o
 .PHONY : src/bf16/add_sim.o
 
@@ -276,6 +313,30 @@ src/bf16/multiply_sim.s: src/bf16/multiply_sim.cpp.s
 src/bf16/multiply_sim.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.s
 .PHONY : src/bf16/multiply_sim.cpp.s
+
+test/PE/test_mac_unit.o: test/PE/test_mac_unit.cpp.o
+.PHONY : test/PE/test_mac_unit.o
+
+# target to build an object file
+test/PE/test_mac_unit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/test/PE/test_mac_unit.cpp.o
+.PHONY : test/PE/test_mac_unit.cpp.o
+
+test/PE/test_mac_unit.i: test/PE/test_mac_unit.cpp.i
+.PHONY : test/PE/test_mac_unit.i
+
+# target to preprocess a source file
+test/PE/test_mac_unit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/test/PE/test_mac_unit.cpp.i
+.PHONY : test/PE/test_mac_unit.cpp.i
+
+test/PE/test_mac_unit.s: test/PE/test_mac_unit.cpp.s
+.PHONY : test/PE/test_mac_unit.s
+
+# target to generate assembly for a file
+test/PE/test_mac_unit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/test/PE/test_mac_unit.cpp.s
+.PHONY : test/PE/test_mac_unit.cpp.s
 
 test/bf16/test_add_sim.o: test/bf16/test_add_sim.cpp.o
 .PHONY : test/bf16/test_add_sim.o
@@ -385,7 +446,11 @@ help:
 	@echo "... test_add_sim"
 	@echo "... test_bf16_basic_ops"
 	@echo "... test_convert_sim"
+	@echo "... test_mac_unit"
 	@echo "... test_multiply_sim"
+	@echo "... src/PE/units/MacUnit.o"
+	@echo "... src/PE/units/MacUnit.i"
+	@echo "... src/PE/units/MacUnit.s"
 	@echo "... src/bf16/add_sim.o"
 	@echo "... src/bf16/add_sim.i"
 	@echo "... src/bf16/add_sim.s"
@@ -398,6 +463,9 @@ help:
 	@echo "... src/bf16/multiply_sim.o"
 	@echo "... src/bf16/multiply_sim.i"
 	@echo "... src/bf16/multiply_sim.s"
+	@echo "... test/PE/test_mac_unit.o"
+	@echo "... test/PE/test_mac_unit.i"
+	@echo "... test/PE/test_mac_unit.s"
 	@echo "... test/bf16/test_add_sim.o"
 	@echo "... test/bf16/test_add_sim.i"
 	@echo "... test/bf16/test_add_sim.s"

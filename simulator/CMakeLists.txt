@@ -17,6 +17,7 @@ add_library(bf16_sim STATIC
     src/bf16/convert_sim.cpp
     src/bf16/add_sim.cpp
     src/bf16/multiply_sim.cpp
+    src/PE/units/MacUnit.cpp
 )
 
 # Add test executables
@@ -31,3 +32,6 @@ target_link_libraries(test_add_sim bf16_sim)
 
 add_executable(test_multiply_sim test/bf16/test_multiply_sim.cpp)
 target_link_libraries(test_multiply_sim bf16_sim)
+
+add_executable(test_mac_unit test/PE/test_mac_unit.cpp)
+target_link_libraries(test_mac_unit bf16_sim)

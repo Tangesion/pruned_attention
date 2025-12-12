@@ -8,8 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/tgx/projects/pruned_attention/simulator/src/add_sim.cpp" "CMakeFiles/add_sim.dir/src/add_sim.cpp.o" "gcc" "CMakeFiles/add_sim.dir/src/add_sim.cpp.o.d"
-  "/home/tgx/projects/pruned_attention/simulator/src/main.cpp" "CMakeFiles/add_sim.dir/src/main.cpp.o" "gcc" "CMakeFiles/add_sim.dir/src/main.cpp.o.d"
+  "/home/tgx/projects/pruned_attention/simulator/test/PE/test_mac_unit.cpp" "CMakeFiles/test_mac_unit.dir/test/PE/test_mac_unit.cpp.o" "gcc" "CMakeFiles/test_mac_unit.dir/test/PE/test_mac_unit.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

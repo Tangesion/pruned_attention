@@ -1,2 +1,2 @@
-/usr/bin/ar qc libbf16_sim.a CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o
+/usr/bin/ar qc libbf16_sim.a CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o
 /usr/bin/ranlib libbf16_sim.a

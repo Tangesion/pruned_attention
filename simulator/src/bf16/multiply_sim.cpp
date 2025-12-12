@@ -1,4 +1,5 @@
 #include "bf16/multiply_sim.h"
+#include "PE/base/PipelineInput.h"
 #include <cstdint>
 
 namespace bf16 {
@@ -62,8 +63,13 @@ bool BF16MultiplyPipeline::check_special_cases(uint16_t a, uint16_t b, uint16_t&
     return false;
 }
 
-void BF16MultiplyPipeline::clock_cycle(uint16_t bf16_a, uint16_t bf16_b, bool valid) {
+void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
     cycle_count++;
+
+    const auto* two_op_input = dynamic_cast<const PE::TwoOperandInput*>(&input);
+    bool valid = two_op_input && two_op_input->valid;
+    uint16_t bf16_a = valid ? two_op_input->a : 0;
+    uint16_t bf16_b = valid ? two_op_input->b : 0;
 
     // Stage 5: Normalization and Output
     stage5.is_valid = stage4.is_valid;

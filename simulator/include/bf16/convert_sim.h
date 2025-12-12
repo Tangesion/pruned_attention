@@ -1,13 +1,14 @@
 #ifndef CONVERT_SIM_H
 #define CONVERT_SIM_H
 
+#include "PE/base/Pipeline.h"
 #include <cstdint>
 #include <deque>
 #include <stdexcept>
 
 namespace bf16 {
 
-struct PipelineStage {
+struct ConvertPipelineStage {
     uint32_t fp32_val;
     bool is_valid;
     uint16_t high_bits;
@@ -18,23 +19,21 @@ struct PipelineStage {
     uint16_t bf16_val;
 };
 
-class FP32toBF16Pipeline {
+class BF16ConvertPipeline final : public PE::Pipeline {
 public:
-    FP32toBF16Pipeline();
-    void reset();
-    void clock_cycle(uint32_t new_fp32, bool new_valid);
-    const std::deque<uint16_t>& get_outputs() const;
-    uint16_t pop_output();
+    BF16ConvertPipeline();
+    void reset() override;
+    void clock_cycle(const PE::PipelineInput& input) override;
+    const std::deque<uint16_t>& get_outputs() const override;
+    uint16_t pop_output() override;
+    bool is_active() const override;
 
 private:
     void decompose_fp32(uint32_t fp32_val, uint16_t& sign, uint16_t& exponent, uint16_t& mantissa);
 
-    PipelineStage stage1;
-    PipelineStage stage2;
-    PipelineStage stage3;
-    
-    std::deque<uint16_t> outputs;
-    uint32_t cycle_count;
+    ConvertPipelineStage stage1;
+    ConvertPipelineStage stage2;
+    ConvertPipelineStage stage3;
 };
 
 } // namespace bf16
