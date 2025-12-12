@@ -1,0 +1,33 @@
+# Minimum CMake version requirement
+cmake_minimum_required(VERSION 3.10)
+
+# Project name
+project(BF16Simulator)
+
+# Set C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+# Add include directories
+include_directories(include)
+
+# Create a static library for the bf16 simulation
+add_library(bf16_sim STATIC
+    src/bf16/bf16_basic_ops.cpp
+    src/bf16/convert_sim.cpp
+    src/bf16/add_sim.cpp
+    src/bf16/multiply_sim.cpp
+)
+
+# Add test executables
+add_executable(test_bf16_basic_ops test/bf16/test_bf16_basic_ops.cpp)
+target_link_libraries(test_bf16_basic_ops bf16_sim)
+
+add_executable(test_convert_sim test/bf16/test_convert_sim.cpp)
+target_link_libraries(test_convert_sim bf16_sim)
+
+add_executable(test_add_sim test/bf16/test_add_sim.cpp)
+target_link_libraries(test_add_sim bf16_sim)
+
+add_executable(test_multiply_sim test/bf16/test_multiply_sim.cpp)
+target_link_libraries(test_multiply_sim bf16_sim)

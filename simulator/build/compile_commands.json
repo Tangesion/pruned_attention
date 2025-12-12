@@ -1,0 +1,50 @@
+[
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/bf16/bf16_basic_ops.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/src/bf16/bf16_basic_ops.cpp",
+  "output": "CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/bf16/convert_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/src/bf16/convert_sim.cpp",
+  "output": "CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/bf16/add_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/src/bf16/add_sim.cpp",
+  "output": "CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/bf16/multiply_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/src/bf16/multiply_sim.cpp",
+  "output": "CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/test_bf16_basic_ops.dir/test/bf16/test_bf16_basic_ops.cpp.o -c /home/tgx/projects/pruned_attention/simulator/test/bf16/test_bf16_basic_ops.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/test/bf16/test_bf16_basic_ops.cpp",
+  "output": "CMakeFiles/test_bf16_basic_ops.dir/test/bf16/test_bf16_basic_ops.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/test_convert_sim.dir/test/bf16/test_convert_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/test/bf16/test_convert_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/test/bf16/test_convert_sim.cpp",
+  "output": "CMakeFiles/test_convert_sim.dir/test/bf16/test_convert_sim.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/test_add_sim.dir/test/bf16/test_add_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/test/bf16/test_add_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/test/bf16/test_add_sim.cpp",
+  "output": "CMakeFiles/test_add_sim.dir/test/bf16/test_add_sim.cpp.o"
+},
+{
+  "directory": "/home/tgx/projects/pruned_attention/simulator/build",
+  "command": "/usr/bin/c++  -I/home/tgx/projects/pruned_attention/simulator/include -std=gnu++17 -o CMakeFiles/test_multiply_sim.dir/test/bf16/test_multiply_sim.cpp.o -c /home/tgx/projects/pruned_attention/simulator/test/bf16/test_multiply_sim.cpp",
+  "file": "/home/tgx/projects/pruned_attention/simulator/test/bf16/test_multiply_sim.cpp",
+  "output": "CMakeFiles/test_multiply_sim.dir/test/bf16/test_multiply_sim.cpp.o"
+}
+]

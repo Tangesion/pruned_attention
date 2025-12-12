@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/test_bf16_basic_ops.dir/test/bf16/test_bf16_basic_ops.cpp.o -o test_bf16_basic_ops  libbf16_sim.a
