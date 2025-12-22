@@ -125,10 +125,38 @@ CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/bf16/multiply_sim.cpp -o CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.s
 
+CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/base/backend.cpp
+CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/base/backend.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/base/backend.cpp > CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/base/backend.cpp -o CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.s
+
+CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/base/componentsRegister.cpp
+CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/base/componentsRegister.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/base/componentsRegister.cpp > CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/base/componentsRegister.cpp -o CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.s
+
 CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
 CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacUnit.cpp
 CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacUnit.cpp
 
 CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.i: cmake_force
@@ -139,13 +167,60 @@ CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.s
 
+CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/units/AddUnit.cpp
+CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/units/AddUnit.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/units/AddUnit.cpp > CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/AddUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.s
+
+CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/units/ConvertUnit.cpp
+CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/units/ConvertUnit.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/units/ConvertUnit.cpp > CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/ConvertUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.s
+
+CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/units/MultiplyUnit.cpp
+CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/units/MultiplyUnit.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/units/MultiplyUnit.cpp > CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/MultiplyUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s
+
 # Object files for target bf16_sim
 bf16_sim_OBJECTS = \
 "CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o" \
 "CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o" \
 "CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o" \
 "CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o" \
-"CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o"
+"CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o"
 
 # External object files for target bf16_sim
 bf16_sim_EXTERNAL_OBJECTS =
@@ -154,10 +229,15 @@ libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/bf16/convert_sim.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/bf16/add_sim.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/build.make
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libbf16_sim.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX static library libbf16_sim.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/bf16_sim.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/bf16_sim.dir/link.txt --verbose=$(VERBOSE)
 

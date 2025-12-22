@@ -194,6 +194,102 @@ test_mac_unit/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/build
 .PHONY : test_mac_unit/fast
 
+src/PE/base/backend.o: src/PE/base/backend.cpp.o
+.PHONY : src/PE/base/backend.o
+
+# target to build an object file
+src/PE/base/backend.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.o
+.PHONY : src/PE/base/backend.cpp.o
+
+src/PE/base/backend.i: src/PE/base/backend.cpp.i
+.PHONY : src/PE/base/backend.i
+
+# target to preprocess a source file
+src/PE/base/backend.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.i
+.PHONY : src/PE/base/backend.cpp.i
+
+src/PE/base/backend.s: src/PE/base/backend.cpp.s
+.PHONY : src/PE/base/backend.s
+
+# target to generate assembly for a file
+src/PE/base/backend.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/backend.cpp.s
+.PHONY : src/PE/base/backend.cpp.s
+
+src/PE/base/componentsRegister.o: src/PE/base/componentsRegister.cpp.o
+.PHONY : src/PE/base/componentsRegister.o
+
+# target to build an object file
+src/PE/base/componentsRegister.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.o
+.PHONY : src/PE/base/componentsRegister.cpp.o
+
+src/PE/base/componentsRegister.i: src/PE/base/componentsRegister.cpp.i
+.PHONY : src/PE/base/componentsRegister.i
+
+# target to preprocess a source file
+src/PE/base/componentsRegister.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.i
+.PHONY : src/PE/base/componentsRegister.cpp.i
+
+src/PE/base/componentsRegister.s: src/PE/base/componentsRegister.cpp.s
+.PHONY : src/PE/base/componentsRegister.s
+
+# target to generate assembly for a file
+src/PE/base/componentsRegister.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.s
+.PHONY : src/PE/base/componentsRegister.cpp.s
+
+src/PE/units/AddUnit.o: src/PE/units/AddUnit.cpp.o
+.PHONY : src/PE/units/AddUnit.o
+
+# target to build an object file
+src/PE/units/AddUnit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o
+.PHONY : src/PE/units/AddUnit.cpp.o
+
+src/PE/units/AddUnit.i: src/PE/units/AddUnit.cpp.i
+.PHONY : src/PE/units/AddUnit.i
+
+# target to preprocess a source file
+src/PE/units/AddUnit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.i
+.PHONY : src/PE/units/AddUnit.cpp.i
+
+src/PE/units/AddUnit.s: src/PE/units/AddUnit.cpp.s
+.PHONY : src/PE/units/AddUnit.s
+
+# target to generate assembly for a file
+src/PE/units/AddUnit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.s
+.PHONY : src/PE/units/AddUnit.cpp.s
+
+src/PE/units/ConvertUnit.o: src/PE/units/ConvertUnit.cpp.o
+.PHONY : src/PE/units/ConvertUnit.o
+
+# target to build an object file
+src/PE/units/ConvertUnit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o
+.PHONY : src/PE/units/ConvertUnit.cpp.o
+
+src/PE/units/ConvertUnit.i: src/PE/units/ConvertUnit.cpp.i
+.PHONY : src/PE/units/ConvertUnit.i
+
+# target to preprocess a source file
+src/PE/units/ConvertUnit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.i
+.PHONY : src/PE/units/ConvertUnit.cpp.i
+
+src/PE/units/ConvertUnit.s: src/PE/units/ConvertUnit.cpp.s
+.PHONY : src/PE/units/ConvertUnit.s
+
+# target to generate assembly for a file
+src/PE/units/ConvertUnit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.s
+.PHONY : src/PE/units/ConvertUnit.cpp.s
+
 src/PE/units/MacUnit.o: src/PE/units/MacUnit.cpp.o
 .PHONY : src/PE/units/MacUnit.o
 
@@ -217,6 +313,30 @@ src/PE/units/MacUnit.s: src/PE/units/MacUnit.cpp.s
 src/PE/units/MacUnit.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.s
 .PHONY : src/PE/units/MacUnit.cpp.s
+
+src/PE/units/MultiplyUnit.o: src/PE/units/MultiplyUnit.cpp.o
+.PHONY : src/PE/units/MultiplyUnit.o
+
+# target to build an object file
+src/PE/units/MultiplyUnit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o
+.PHONY : src/PE/units/MultiplyUnit.cpp.o
+
+src/PE/units/MultiplyUnit.i: src/PE/units/MultiplyUnit.cpp.i
+.PHONY : src/PE/units/MultiplyUnit.i
+
+# target to preprocess a source file
+src/PE/units/MultiplyUnit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.i
+.PHONY : src/PE/units/MultiplyUnit.cpp.i
+
+src/PE/units/MultiplyUnit.s: src/PE/units/MultiplyUnit.cpp.s
+.PHONY : src/PE/units/MultiplyUnit.s
+
+# target to generate assembly for a file
+src/PE/units/MultiplyUnit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s
+.PHONY : src/PE/units/MultiplyUnit.cpp.s
 
 src/bf16/add_sim.o: src/bf16/add_sim.cpp.o
 .PHONY : src/bf16/add_sim.o
@@ -448,9 +568,24 @@ help:
 	@echo "... test_convert_sim"
 	@echo "... test_mac_unit"
 	@echo "... test_multiply_sim"
+	@echo "... src/PE/base/backend.o"
+	@echo "... src/PE/base/backend.i"
+	@echo "... src/PE/base/backend.s"
+	@echo "... src/PE/base/componentsRegister.o"
+	@echo "... src/PE/base/componentsRegister.i"
+	@echo "... src/PE/base/componentsRegister.s"
+	@echo "... src/PE/units/AddUnit.o"
+	@echo "... src/PE/units/AddUnit.i"
+	@echo "... src/PE/units/AddUnit.s"
+	@echo "... src/PE/units/ConvertUnit.o"
+	@echo "... src/PE/units/ConvertUnit.i"
+	@echo "... src/PE/units/ConvertUnit.s"
 	@echo "... src/PE/units/MacUnit.o"
 	@echo "... src/PE/units/MacUnit.i"
 	@echo "... src/PE/units/MacUnit.s"
+	@echo "... src/PE/units/MultiplyUnit.o"
+	@echo "... src/PE/units/MultiplyUnit.i"
+	@echo "... src/PE/units/MultiplyUnit.s"
 	@echo "... src/bf16/add_sim.o"
 	@echo "... src/bf16/add_sim.i"
 	@echo "... src/bf16/add_sim.s"

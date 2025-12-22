@@ -10,7 +10,6 @@
 #include <memory>
 #include <vector>
 #include <utility>
-#include <numeric>
 
 void test_dot_product() {
     std::cout << "\n" << std::string(80, '=') << std::endl;
@@ -18,9 +17,9 @@ void test_dot_product() {
     std::cout << std::string(80, '=') << std::endl;
 
     // 1. Setup the MacUnit and its dependencies
-    auto mult_unit = std::make_shared<PE::MultiplyUnit>(std::make_unique<bf16::BF16MultiplyPipeline>());
-    auto add_unit = std::make_shared<PE::AddUnit>(std::make_unique<bf16::BF16AddPipeline>());
-    PE::MacUnit my_mac(mult_unit, add_unit);
+    PE::PipelinePtr mult_pipe = std::make_unique<bf16::BF16MultiplyPipeline>();
+    PE::PipelinePtr add_pipe = std::make_unique<bf16::BF16AddPipeline>();
+    PE::MacUnit my_mac(std::move(mult_pipe), std::move(add_pipe));
 
     // 2. Prepare input data for dot product: [1, 2, 3] · [4, 5, 6]
     std::vector<std::pair<float, float>> input_vectors = {
@@ -35,7 +34,7 @@ void test_dot_product() {
     
     // 3. Reset and initialize the MAC unit
     my_mac.reset();
-    my_mac.set_initial_acc(bf16::float_to_bf16(0.0f));
+    //my_mac.set_initial_acc(bf16::float_to_bf16(0.0f));
 
     // 4. Main test loop
     std::vector<uint16_t> final_outputs;
@@ -47,7 +46,11 @@ void test_dot_product() {
         if (input_idx < input_vectors.size()) {
             uint16_t in1 = bf16::float_to_bf16(input_vectors[input_idx].first);
             uint16_t in2 = bf16::float_to_bf16(input_vectors[input_idx].second);
-            my_mac.load_inputs(in1, in2, true);
+            if (input_idx == 1) {
+                my_mac.load_inputs(in1, in2, true, true); // Reset accumulator on last input
+            } else {
+                my_mac.load_inputs(in1, in2, true);
+            }
             input_idx++;
         } else {
             my_mac.load_inputs(0, 0, false);

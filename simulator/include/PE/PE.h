@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <vector>
-#include "PE/utils.h"
 
 namespace pe {
 

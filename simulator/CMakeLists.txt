@@ -17,7 +17,12 @@ add_library(bf16_sim STATIC
     src/bf16/convert_sim.cpp
     src/bf16/add_sim.cpp
     src/bf16/multiply_sim.cpp
+    src/PE/base/backend.cpp
+    src/PE/base/componentsRegister.cpp
     src/PE/units/MacUnit.cpp
+    src/PE/units/AddUnit.cpp
+    src/PE/units/ConvertUnit.cpp
+    src/PE/units/MultiplyUnit.cpp
 )
 
 # Add test executables

@@ -5,7 +5,6 @@
 #include "PE/base/PipelineInput.h"
 #include "bf16/convert_sim.h"
 #include <memory>
-#include <stdexcept>
 
 namespace PE {
 
@@ -15,38 +14,19 @@ private:
     ConvertInput current_input;
 
 public:
-    explicit ConvertUnit(PipelinePtr p) : pipeline(std::move(p)) {
-        if (!pipeline) {
-            throw std::invalid_argument("ConvertUnit received a null pipeline.");
-        }
-    }
+    explicit ConvertUnit(PipelinePtr p);
 
-    void reset() override {
-        pipeline->reset();
-        current_input = {};
-    }
+    void reset() override;
 
-    bool is_active() const override {
-        return pipeline->is_active();
-    }
+    bool is_active() const override;
 
-    void clock_cycle() override {
-        pipeline->clock_cycle(current_input);
-        current_input.valid = false;
-    }
+    void clock_cycle() override;
 
-    void load_operand(uint32_t val, bool valid) {
-        current_input.val = val;
-        current_input.valid = valid;
-    }
+    void load_operand(uint32_t val, bool valid);
 
-    uint16_t get_result() {
-        return pipeline->pop_output();
-    }
+    uint16_t get_result();
 
-    bool has_output() const {
-        return !pipeline->get_outputs().empty();
-    }
+    bool has_output() const;
 };
 
 } // namespace PE

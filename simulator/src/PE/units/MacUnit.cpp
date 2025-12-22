@@ -1,14 +1,14 @@
 #include "PE/units/MacUnit.h"
-#include "bf16/add_sim.h"
-#include "bf16/multiply_sim.h"
+#include "PE/base/Pipeline.h"
+#include "PE/base/backend.h"
 #include <stdexcept>
 #include <memory>
 
 namespace PE {
 
-MacUnit::MacUnit(std::shared_ptr<MultiplyUnit> mult, std::shared_ptr<AddUnit> add)
-    : mult_unit(mult), add_unit(add)
-{
+MacUnit::MacUnit(PipelinePtr mult_pipe, PipelinePtr add_pipe)
+    : mult_unit(std::make_unique<MultiplyUnit>(std::move(mult_pipe))),
+      add_unit(std::make_unique<AddUnit>(std::move(add_pipe))) {
     if (!mult_unit || !add_unit) {
         throw std::invalid_argument("MacUnit components cannot be null.");
     }
@@ -26,6 +26,8 @@ void MacUnit::reset() {
     multiply_queue.clear();
     acc_queue.clear();
     outputs.clear();
+
+    acc_queue.push_back(0); // Initialize accumulator to zero
     
     cycle_count = 0;
 }
@@ -34,10 +36,11 @@ bool MacUnit::is_active() const {
     return mult_unit->is_active() || add_unit->is_active() || !multiply_queue.empty() || !acc_queue.empty();
 }
 
-void MacUnit::load_inputs(uint16_t in1, uint16_t in2, bool valid) {
+void MacUnit::load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_flag) {
     this->input1 = in1;
     this->input2 = in2;
     this->input_valid = valid;
+    this->reset_flag = reset_flag;
 }
 
 void MacUnit::set_initial_acc(uint16_t initial_acc) {
@@ -72,9 +75,17 @@ void MacUnit::clock_cycle() {
     
     if (add_inputs_valid) {
         uint16_t mult_val = multiply_queue.front();
-        uint16_t acc_val = acc_queue.front();
-        multiply_queue.pop_front();
+        bool reset_acc = reset_queue.front();
+        uint16_t acc_val = 0;
+
+        if (!reset_acc) {
+            acc_val = acc_queue.front();
+        } else {
+            set_initial_acc(0);
+        }
+        reset_queue.pop_front();
         acc_queue.pop_front();
+        multiply_queue.pop_front();
         add_unit->load_operands(mult_val, acc_val, true);
     } else {
         add_unit->load_operands(0, 0, false);
@@ -88,11 +99,26 @@ void MacUnit::clock_cycle() {
     }
 
     mult_unit->load_operands(this->input1, this->input2, this->input_valid);
+    reset_queue.push_back(this->reset_flag);
+    this->reset_flag = false;
     this->input_valid = false; 
     mult_unit->clock_cycle();
     if (mult_unit->has_output()) {
         multiply_queue.push_back(mult_unit->get_result());
+        this->reset_flag = false;
     }
 }
+
+class MacUnitCreator : public Backend::Creator {
+public:
+    ComputeComponent* onCreate(std::vector<PipelinePtr>&& pipes) const override {
+        if (pipes.size() != 2) {
+            throw std::invalid_argument("MacUnitCreator expects exactly two pipelines.");
+        }
+        return new MacUnit(std::move(pipes[0]), std::move(pipes[1]));
+    }
+};
+
+REGISTER_COMPONENT("mac_unit", MacUnitCreator);
 
 } // namespace PE
