@@ -19,3 +19,6 @@ lora_mixed/
 
 LongBench/data*
 LongBench/pred*
+
+build/
+.cache/

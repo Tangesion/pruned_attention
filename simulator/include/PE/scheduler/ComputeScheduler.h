@@ -11,15 +11,16 @@ public:
     ComputeScheduler(std::unique_ptr<ComputeComponent> component)
         : hardware_component(std::move(component)), cycle_count(0) {};
 
-protected:
     void reset() {
         cycle_count = 0;
         hardware_component->reset();
     };
+
     size_t get_total_cycles() const {
         return cycle_count;
     };
 
+protected:
     void clock_cycle() {
         cycle_count++;
         hardware_component->clock_cycle();

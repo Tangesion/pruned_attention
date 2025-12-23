@@ -23,6 +23,8 @@ add_library(bf16_sim STATIC
     src/PE/units/AddUnit.cpp
     src/PE/units/ConvertUnit.cpp
     src/PE/units/MultiplyUnit.cpp
+    src/PE/units/MacArrayUnit.cpp
+    src/PE/scheduler/GemvScheduler.cpp
 )
 
 # Add test executables
@@ -40,3 +42,9 @@ target_link_libraries(test_multiply_sim bf16_sim)
 
 add_executable(test_mac_unit test/PE/test_mac_unit.cpp)
 target_link_libraries(test_mac_unit bf16_sim)
+
+add_executable(test_gemv_scheduler test/PE/test_gemv_scheduler.cpp)
+target_link_libraries(test_gemv_scheduler bf16_sim)
+
+add_executable(test_gemv_arbitrary test/PE/test_gemv_arbitrary.cpp)
+target_link_libraries(test_gemv_arbitrary bf16_sim)

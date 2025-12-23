@@ -21,6 +21,8 @@ public:
     uint16_t get_final_output();
     uint16_t get_accumulated_result() const;
 
+    void set_interleave_depth(size_t depth);
+
 private:
     std::unique_ptr<MultiplyUnit> mult_unit;
     std::unique_ptr<AddUnit> add_unit;
@@ -38,6 +40,8 @@ private:
     uint32_t cycle_count = 0;
 
     bool reset_flag = false;
+    bool first_reset = true;
+    size_t interleave_depth = 1;
 };
 
 } // namespace PE

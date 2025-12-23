@@ -42,7 +42,7 @@ void test_dot_product() {
     int cycle = 0;
     const int max_cycles = 100;
 
-    while ((input_idx < input_vectors.size() || my_mac.is_active()) && cycle < max_cycles) {
+    while ((input_idx < input_vectors.size() || my_mac.is_active())) {
         if (input_idx < input_vectors.size()) {
             uint16_t in1 = bf16::float_to_bf16(input_vectors[input_idx].first);
             uint16_t in2 = bf16::float_to_bf16(input_vectors[input_idx].second);

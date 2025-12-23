@@ -1,12 +1,14 @@
 #include "PE/units/MacArrayUnit.h"
+#include <cstdint>
 #include <memory>
+#include <iostream>
 
 namespace PE {
 
-MacArrayUnit::MacArrayUnit(PipelinePtr mult_pipe, PipelinePtr add_pipe, size_t array_size)
+MacArrayUnit::MacArrayUnit(PipelineFactory mult_pipe_factory, PipelineFactory add_pipe_factory, size_t array_size)
     : size(array_size) {
     for (size_t i = 0; i < size; ++i) {
-        mac_units.emplace_back(std::make_unique<MacUnit>(std::move(mult_pipe), std::move(add_pipe)));
+        mac_units.emplace_back(std::make_unique<MacUnit>(mult_pipe_factory(), add_pipe_factory()));
     }
     reset();
 }
@@ -34,12 +36,15 @@ bool MacArrayUnit::is_active() const {
     return false;
 }
 
-void MacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>& inputs, const std::vector<bool>& valids) {
+void MacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>& inputs, const std::vector<bool>& valids, const std::vector<bool>& reset_flags) {
+    // std::cout << "[DEBUG] MacArrayUnit::load_inputs size=" << inputs.size() << std::endl;
     if (inputs.size() != size || valids.size() != size) {
+        std::cerr << "[ERROR] Input size mismatch in MacArrayUnit" << std::endl;
         throw std::invalid_argument("Input size does not match MacArrayUnit size.");
     }
 
     if (inputs.size() > size) {
+        std::cerr << "[ERROR] Too many inputs in MacArrayUnit" << std::endl;
         throw std::invalid_argument("Too many inputs provided to MacArrayUnit.");
     }
 
@@ -47,24 +52,34 @@ void MacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>&
         mac_units[i]->load_inputs(
             i >= inputs.size() ? 0 : inputs[i].first,
             i >= inputs.size() ? 0 : inputs[i].second,
-            i >= valids.size() ? false : valids[i]
+            i >= valids.size() ? false : valids[i],
+            (reset_flags.empty() || i >= reset_flags.size()) ? false : reset_flags[i]
         );
     }
 }
 
-std::vector<uint16_t> MacArrayUnit::pop_all_outputs() {
-    std::vector<uint16_t> results;
-    results.reserve(size);
-
-    for (auto& mac : mac_units) {
-        if (mac->has_final_output()) {
-            results.push_back(mac->get_final_output());
-        } else {
-            throw std::runtime_error("MacArrayUnit: One of the MacUnits has no output to pop.");
+bool MacArrayUnit::has_final_output() const {
+    for (const auto& mac : mac_units) {
+        if (!mac->has_final_output()) {
+            return false;
         }
     }
-    return results;
+    return true;
 }
 
+bool MacArrayUnit::has_output(size_t mac_index) const {
+    if (mac_index >= size) {
+        return false; 
+    }
+    return mac_units[mac_index]->has_final_output();
+}
+
+uint16_t MacArrayUnit::pop_output(size_t mac_index) {
+    if (mac_index >= size) {
+        std::cerr << "[ERROR] Mac index out of range: " << mac_index << std::endl;
+        throw std::out_of_range("Mac index out of range in MacArrayUnit.");
+    }
+    return mac_units[mac_index]->get_final_output();
+}
 
 }// namespace PE

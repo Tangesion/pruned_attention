@@ -16,14 +16,33 @@ public:
 
     GemvScheduler(std::unique_ptr<MacArrayUnit> unit, Config config);
 
-    // Run GEMV task
-    // matrix: [Rows x Cols]
-    // input:  [Cols]
-    // return: [Rows]
+    // Run single batch GEMV task
+    // matrix: [K x N]
+    // input:  [1, K]
+    // return: [1, N]
     std::vector<uint16_t> run_gemv(
         const std::vector<std::vector<uint16_t>>& matrix, 
         const std::vector<uint16_t>& input
     );
+
+    // Run multiple batches like mha GEMV task
+    // matrices: [B x K x N]
+    // inputs:   [B x 1 x K]
+    // return:   [B x 1 x N]
+    std::vector<std::vector<uint16_t>> run_gemv(
+        const std::vector<std::vector<std::vector<uint16_t>>>& matrices, 
+        const std::vector<std::vector<uint16_t>>& inputs
+    );
+
+    // Run multiple batches like multi-batches input single matrix GEMV task
+    // matrix: [K x N]
+    // inputs: [B x 1 x K]
+    // return: [B x 1 x N]
+    std::vector<std::vector<uint16_t>> run_gemv(
+        const std::vector<std::vector<uint16_t>>& matrix, 
+        const std::vector<std::vector<uint16_t>>& inputs
+    );
+
 
 private:
     Config config;

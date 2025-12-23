@@ -1,1 +1,0 @@
-/usr/bin/c++ -g CMakeFiles/test_add_sim.dir/test/bf16/test_add_sim.cpp.o -o test_add_sim  libbf16_sim.a

@@ -30,10 +30,11 @@ void MacUnit::reset() {
     acc_queue.push_back(0); // Initialize accumulator to zero
     
     cycle_count = 0;
+    first_reset = true;
 }
 
 bool MacUnit::is_active() const {
-    return mult_unit->is_active() || add_unit->is_active() || !multiply_queue.empty() || !acc_queue.empty();
+    return mult_unit->is_active() || add_unit->is_active();
 }
 
 void MacUnit::load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_flag) {
@@ -81,6 +82,9 @@ void MacUnit::clock_cycle() {
         if (!reset_acc) {
             acc_val = acc_queue.front();
         } else {
+            if (!first_reset)
+                outputs.push_back(acc_queue.front());
+            first_reset = false;
             set_initial_acc(0);
         }
         reset_queue.pop_front();
@@ -95,7 +99,7 @@ void MacUnit::clock_cycle() {
     if (add_unit->has_output()) {
         uint16_t add_result = add_unit->get_result();
         acc_queue.push_back(add_result);
-        outputs.push_back(add_result);
+        //outputs.push_back(add_result);
     }
 
     mult_unit->load_operands(this->input1, this->input2, this->input_valid);
