@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/test_gemv_arbitrary.dir/test/PE/test_gemv_arbitrary.cpp.o -o test_gemv_arbitrary  libbf16_sim.a

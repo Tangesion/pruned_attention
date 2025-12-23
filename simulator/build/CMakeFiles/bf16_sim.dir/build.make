@@ -209,6 +209,34 @@ CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/MultiplyUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.s
 
+CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacArrayUnit.cpp
+CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacArrayUnit.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacArrayUnit.cpp > CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/units/MacArrayUnit.cpp -o CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.s
+
+CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o: CMakeFiles/bf16_sim.dir/flags.make
+CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o: /home/tgx/projects/pruned_attention/simulator/src/PE/scheduler/GemvScheduler.cpp
+CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o: CMakeFiles/bf16_sim.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o -MF CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o.d -o CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o -c /home/tgx/projects/pruned_attention/simulator/src/PE/scheduler/GemvScheduler.cpp
+
+CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/tgx/projects/pruned_attention/simulator/src/PE/scheduler/GemvScheduler.cpp > CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.i
+
+CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/tgx/projects/pruned_attention/simulator/src/PE/scheduler/GemvScheduler.cpp -o CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.s
+
 # Object files for target bf16_sim
 bf16_sim_OBJECTS = \
 "CMakeFiles/bf16_sim.dir/src/bf16/bf16_basic_ops.cpp.o" \
@@ -220,7 +248,9 @@ bf16_sim_OBJECTS = \
 "CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o" \
 "CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o" \
 "CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o" \
-"CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o"
+"CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o" \
+"CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o"
 
 # External object files for target bf16_sim
 bf16_sim_EXTERNAL_OBJECTS =
@@ -235,9 +265,11 @@ libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/MacUnit.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/AddUnit.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/MultiplyUnit.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o
+libbf16_sim.a: CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/build.make
 libbf16_sim.a: CMakeFiles/bf16_sim.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX static library libbf16_sim.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Linking CXX static library libbf16_sim.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/bf16_sim.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/bf16_sim.dir/link.txt --verbose=$(VERBOSE)
 

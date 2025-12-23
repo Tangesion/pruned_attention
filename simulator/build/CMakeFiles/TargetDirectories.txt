@@ -4,5 +4,7 @@
 /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/test_add_sim.dir
 /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/test_multiply_sim.dir
 /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/test_mac_unit.dir
+/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/test_gemv_scheduler.dir
+/home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/test_gemv_arbitrary.dir
 /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/edit_cache.dir
 /home/tgx/projects/pruned_attention/simulator/build/CMakeFiles/rebuild_cache.dir

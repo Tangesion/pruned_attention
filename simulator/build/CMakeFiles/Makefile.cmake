@@ -50,4 +50,6 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/test_add_sim.dir/DependInfo.cmake"
   "CMakeFiles/test_multiply_sim.dir/DependInfo.cmake"
   "CMakeFiles/test_mac_unit.dir/DependInfo.cmake"
+  "CMakeFiles/test_gemv_scheduler.dir/DependInfo.cmake"
+  "CMakeFiles/test_gemv_arbitrary.dir/DependInfo.cmake"
   )

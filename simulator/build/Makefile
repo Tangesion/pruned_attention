@@ -194,6 +194,32 @@ test_mac_unit/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_mac_unit.dir/build.make CMakeFiles/test_mac_unit.dir/build
 .PHONY : test_mac_unit/fast
 
+#=============================================================================
+# Target rules for targets named test_gemv_scheduler
+
+# Build rule for target.
+test_gemv_scheduler: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_gemv_scheduler
+.PHONY : test_gemv_scheduler
+
+# fast build rule for target.
+test_gemv_scheduler/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_scheduler.dir/build.make CMakeFiles/test_gemv_scheduler.dir/build
+.PHONY : test_gemv_scheduler/fast
+
+#=============================================================================
+# Target rules for targets named test_gemv_arbitrary
+
+# Build rule for target.
+test_gemv_arbitrary: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_gemv_arbitrary
+.PHONY : test_gemv_arbitrary
+
+# fast build rule for target.
+test_gemv_arbitrary/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_arbitrary.dir/build.make CMakeFiles/test_gemv_arbitrary.dir/build
+.PHONY : test_gemv_arbitrary/fast
+
 src/PE/base/backend.o: src/PE/base/backend.cpp.o
 .PHONY : src/PE/base/backend.o
 
@@ -242,6 +268,30 @@ src/PE/base/componentsRegister.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/base/componentsRegister.cpp.s
 .PHONY : src/PE/base/componentsRegister.cpp.s
 
+src/PE/scheduler/GemvScheduler.o: src/PE/scheduler/GemvScheduler.cpp.o
+.PHONY : src/PE/scheduler/GemvScheduler.o
+
+# target to build an object file
+src/PE/scheduler/GemvScheduler.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.o
+.PHONY : src/PE/scheduler/GemvScheduler.cpp.o
+
+src/PE/scheduler/GemvScheduler.i: src/PE/scheduler/GemvScheduler.cpp.i
+.PHONY : src/PE/scheduler/GemvScheduler.i
+
+# target to preprocess a source file
+src/PE/scheduler/GemvScheduler.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.i
+.PHONY : src/PE/scheduler/GemvScheduler.cpp.i
+
+src/PE/scheduler/GemvScheduler.s: src/PE/scheduler/GemvScheduler.cpp.s
+.PHONY : src/PE/scheduler/GemvScheduler.s
+
+# target to generate assembly for a file
+src/PE/scheduler/GemvScheduler.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/scheduler/GemvScheduler.cpp.s
+.PHONY : src/PE/scheduler/GemvScheduler.cpp.s
+
 src/PE/units/AddUnit.o: src/PE/units/AddUnit.cpp.o
 .PHONY : src/PE/units/AddUnit.o
 
@@ -289,6 +339,30 @@ src/PE/units/ConvertUnit.s: src/PE/units/ConvertUnit.cpp.s
 src/PE/units/ConvertUnit.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/ConvertUnit.cpp.s
 .PHONY : src/PE/units/ConvertUnit.cpp.s
+
+src/PE/units/MacArrayUnit.o: src/PE/units/MacArrayUnit.cpp.o
+.PHONY : src/PE/units/MacArrayUnit.o
+
+# target to build an object file
+src/PE/units/MacArrayUnit.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.o
+.PHONY : src/PE/units/MacArrayUnit.cpp.o
+
+src/PE/units/MacArrayUnit.i: src/PE/units/MacArrayUnit.cpp.i
+.PHONY : src/PE/units/MacArrayUnit.i
+
+# target to preprocess a source file
+src/PE/units/MacArrayUnit.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.i
+.PHONY : src/PE/units/MacArrayUnit.cpp.i
+
+src/PE/units/MacArrayUnit.s: src/PE/units/MacArrayUnit.cpp.s
+.PHONY : src/PE/units/MacArrayUnit.s
+
+# target to generate assembly for a file
+src/PE/units/MacArrayUnit.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/PE/units/MacArrayUnit.cpp.s
+.PHONY : src/PE/units/MacArrayUnit.cpp.s
 
 src/PE/units/MacUnit.o: src/PE/units/MacUnit.cpp.o
 .PHONY : src/PE/units/MacUnit.o
@@ -434,6 +508,54 @@ src/bf16/multiply_sim.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/bf16_sim.dir/build.make CMakeFiles/bf16_sim.dir/src/bf16/multiply_sim.cpp.s
 .PHONY : src/bf16/multiply_sim.cpp.s
 
+test/PE/test_gemv_arbitrary.o: test/PE/test_gemv_arbitrary.cpp.o
+.PHONY : test/PE/test_gemv_arbitrary.o
+
+# target to build an object file
+test/PE/test_gemv_arbitrary.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_arbitrary.dir/build.make CMakeFiles/test_gemv_arbitrary.dir/test/PE/test_gemv_arbitrary.cpp.o
+.PHONY : test/PE/test_gemv_arbitrary.cpp.o
+
+test/PE/test_gemv_arbitrary.i: test/PE/test_gemv_arbitrary.cpp.i
+.PHONY : test/PE/test_gemv_arbitrary.i
+
+# target to preprocess a source file
+test/PE/test_gemv_arbitrary.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_arbitrary.dir/build.make CMakeFiles/test_gemv_arbitrary.dir/test/PE/test_gemv_arbitrary.cpp.i
+.PHONY : test/PE/test_gemv_arbitrary.cpp.i
+
+test/PE/test_gemv_arbitrary.s: test/PE/test_gemv_arbitrary.cpp.s
+.PHONY : test/PE/test_gemv_arbitrary.s
+
+# target to generate assembly for a file
+test/PE/test_gemv_arbitrary.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_arbitrary.dir/build.make CMakeFiles/test_gemv_arbitrary.dir/test/PE/test_gemv_arbitrary.cpp.s
+.PHONY : test/PE/test_gemv_arbitrary.cpp.s
+
+test/PE/test_gemv_scheduler.o: test/PE/test_gemv_scheduler.cpp.o
+.PHONY : test/PE/test_gemv_scheduler.o
+
+# target to build an object file
+test/PE/test_gemv_scheduler.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_scheduler.dir/build.make CMakeFiles/test_gemv_scheduler.dir/test/PE/test_gemv_scheduler.cpp.o
+.PHONY : test/PE/test_gemv_scheduler.cpp.o
+
+test/PE/test_gemv_scheduler.i: test/PE/test_gemv_scheduler.cpp.i
+.PHONY : test/PE/test_gemv_scheduler.i
+
+# target to preprocess a source file
+test/PE/test_gemv_scheduler.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_scheduler.dir/build.make CMakeFiles/test_gemv_scheduler.dir/test/PE/test_gemv_scheduler.cpp.i
+.PHONY : test/PE/test_gemv_scheduler.cpp.i
+
+test/PE/test_gemv_scheduler.s: test/PE/test_gemv_scheduler.cpp.s
+.PHONY : test/PE/test_gemv_scheduler.s
+
+# target to generate assembly for a file
+test/PE/test_gemv_scheduler.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_gemv_scheduler.dir/build.make CMakeFiles/test_gemv_scheduler.dir/test/PE/test_gemv_scheduler.cpp.s
+.PHONY : test/PE/test_gemv_scheduler.cpp.s
+
 test/PE/test_mac_unit.o: test/PE/test_mac_unit.cpp.o
 .PHONY : test/PE/test_mac_unit.o
 
@@ -566,6 +688,8 @@ help:
 	@echo "... test_add_sim"
 	@echo "... test_bf16_basic_ops"
 	@echo "... test_convert_sim"
+	@echo "... test_gemv_arbitrary"
+	@echo "... test_gemv_scheduler"
 	@echo "... test_mac_unit"
 	@echo "... test_multiply_sim"
 	@echo "... src/PE/base/backend.o"
@@ -574,12 +698,18 @@ help:
 	@echo "... src/PE/base/componentsRegister.o"
 	@echo "... src/PE/base/componentsRegister.i"
 	@echo "... src/PE/base/componentsRegister.s"
+	@echo "... src/PE/scheduler/GemvScheduler.o"
+	@echo "... src/PE/scheduler/GemvScheduler.i"
+	@echo "... src/PE/scheduler/GemvScheduler.s"
 	@echo "... src/PE/units/AddUnit.o"
 	@echo "... src/PE/units/AddUnit.i"
 	@echo "... src/PE/units/AddUnit.s"
 	@echo "... src/PE/units/ConvertUnit.o"
 	@echo "... src/PE/units/ConvertUnit.i"
 	@echo "... src/PE/units/ConvertUnit.s"
+	@echo "... src/PE/units/MacArrayUnit.o"
+	@echo "... src/PE/units/MacArrayUnit.i"
+	@echo "... src/PE/units/MacArrayUnit.s"
 	@echo "... src/PE/units/MacUnit.o"
 	@echo "... src/PE/units/MacUnit.i"
 	@echo "... src/PE/units/MacUnit.s"
@@ -598,6 +728,12 @@ help:
 	@echo "... src/bf16/multiply_sim.o"
 	@echo "... src/bf16/multiply_sim.i"
 	@echo "... src/bf16/multiply_sim.s"
+	@echo "... test/PE/test_gemv_arbitrary.o"
+	@echo "... test/PE/test_gemv_arbitrary.i"
+	@echo "... test/PE/test_gemv_arbitrary.s"
+	@echo "... test/PE/test_gemv_scheduler.o"
+	@echo "... test/PE/test_gemv_scheduler.i"
+	@echo "... test/PE/test_gemv_scheduler.s"
 	@echo "... test/PE/test_mac_unit.o"
 	@echo "... test/PE/test_mac_unit.i"
 	@echo "... test/PE/test_mac_unit.s"
