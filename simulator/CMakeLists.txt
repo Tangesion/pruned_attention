@@ -24,6 +24,8 @@ add_library(bf16_sim STATIC
     src/PE/units/ConvertUnit.cpp
     src/PE/units/MultiplyUnit.cpp
     src/PE/units/MacArrayUnit.cpp
+    src/PE/units/AddTreeUnit.cpp
+    src/PE/units/ReduceMacUnit.cpp
     src/PE/scheduler/GemvScheduler.cpp
 )
 
@@ -36,6 +38,12 @@ target_link_libraries(test_convert_sim bf16_sim)
 
 add_executable(test_add_sim test/bf16/test_add_sim.cpp)
 target_link_libraries(test_add_sim bf16_sim)
+
+add_executable(test_add_tree test/PE/test_add_tree.cpp)
+target_link_libraries(test_add_tree bf16_sim)
+
+add_executable(test_reduce_mac test/PE/test_reduce_mac.cpp)
+target_link_libraries(test_reduce_mac bf16_sim)
 
 add_executable(test_multiply_sim test/bf16/test_multiply_sim.cpp)
 target_link_libraries(test_multiply_sim bf16_sim)

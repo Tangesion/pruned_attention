@@ -44,7 +44,6 @@ private:
     MultiplyPipelineStage stage2;
     MultiplyPipelineStage stage3;
     MultiplyPipelineStage stage4;
-    MultiplyPipelineStage stage5;
 
     const uint16_t POS_INF = 0x7F80;
     const uint16_t NEG_INF = 0xFF80;

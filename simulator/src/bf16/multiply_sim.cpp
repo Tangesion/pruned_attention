@@ -13,13 +13,12 @@ void BF16MultiplyPipeline::reset() {
     stage2 = {};
     stage3 = {};
     stage4 = {};
-    stage5 = {};
     outputs.clear();
     cycle_count = 0;
 }
 
 bool BF16MultiplyPipeline::is_active() const {
-    return stage1.is_valid || stage2.is_valid || stage3.is_valid || stage4.is_valid || stage5.is_valid;
+    return stage1.is_valid || stage2.is_valid || stage3.is_valid || stage4.is_valid;
 }
 
 void BF16MultiplyPipeline::decompose_bf16(uint16_t bf16, uint16_t& sign, uint16_t& exponent, uint16_t& mantissa) {
@@ -71,16 +70,16 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
     uint16_t bf16_a = valid ? two_op_input->a : 0;
     uint16_t bf16_b = valid ? two_op_input->b : 0;
 
-    // Stage 5: Normalization and Output
-    stage5.is_valid = stage4.is_valid;
-    if (stage4.is_valid) {
+    // Stage 4: Normalization and Output (Previously Stage 5)
+    stage4.is_valid = stage3.is_valid;
+    if (stage3.is_valid) {
         uint16_t result_bf16 = 0;
-        if (stage4.is_special) {
-            result_bf16 = stage4.result;
+        if (stage3.is_special) {
+            result_bf16 = stage3.result;
         } else {
-            uint32_t mant_result = stage4.mant_result;
-            int exp_result = stage4.exp_result;
-            uint16_t sign_result = stage4.sign_result;
+            uint32_t mant_result = stage3.mant_result;
+            int exp_result = stage3.exp_result;
+            uint16_t sign_result = stage3.sign_result;
 
             if (mant_result == 0) {
                 result_bf16 = compose_bf16(sign_result, 0, 0);
@@ -99,7 +98,7 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
                     }
                 } else {
                     uint16_t round_bits = mant_result & 0x7F;
-                    uint16_t half_point = 0x40; // Corrected half point for 7 bit mantissa
+                    uint16_t half_point = 0x40;
                     mant_result >>= 7;
                      if (round_bits > half_point || (round_bits == half_point && (mant_result & 0x1))) {
                         mant_result++;
@@ -136,69 +135,66 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
         outputs.push_back(result_bf16);
     }
 
-    // Stage 4: Rounding
-    stage4.is_valid = stage3.is_valid;
-    stage4.is_special = stage3.is_special;
-    stage4.result = stage3.result;
-    stage4.sign_result = stage3.sign_result;
-    stage4.exp_result = stage3.exp_result;
-    if (stage3.is_valid && !stage3.is_special) {
-        stage4.mant_result = stage3.mant_result;
-    }
-
-    // Stage 3: Mantissa Multiplication
+    // Stage 3: Rounding (Previously Stage 4)
     stage3.is_valid = stage2.is_valid;
     stage3.is_special = stage2.is_special;
     stage3.result = stage2.result;
     stage3.sign_result = stage2.sign_result;
+    stage3.exp_result = stage2.exp_result;
     if (stage2.is_valid && !stage2.is_special) {
-        stage3.exp_result = stage2.exp_a + stage2.exp_b - 127;
-        stage3.mant_result = static_cast<uint32_t>(stage2.mant_a) * stage2.mant_b;
+        stage3.mant_result = stage2.mant_result;
     }
 
-    // Stage 2: Decomposition
+    // Stage 2: Mantissa Multiplication (Previously Stage 3)
     stage2.is_valid = stage1.is_valid;
     stage2.is_special = stage1.is_special;
     stage2.result = stage1.result;
+    stage2.sign_result = stage1.sign_result;
     if (stage1.is_valid && !stage1.is_special) {
-        decompose_bf16(stage1.a, stage2.sign_a, stage2.exp_a, stage2.mant_a);
-        decompose_bf16(stage1.b, stage2.sign_b, stage2.exp_b, stage2.mant_b);
-
-        stage2.sign_result = stage2.sign_a ^ stage2.sign_b;
-
-        if (stage2.exp_a == 0 && stage2.mant_a != 0) {
-            int leading_bit = 0;
-            uint16_t temp_mant = stage2.mant_a;
-            while(temp_mant && !(temp_mant & 0x80)) {
-                temp_mant <<= 1;
-                leading_bit++;
-            }
-            stage2.exp_a = 1 - leading_bit;
-            stage2.mant_a <<= leading_bit;
-        } else {
-            stage2.mant_a |= 0x80;
-        }
-
-        if (stage2.exp_b == 0 && stage2.mant_b != 0) {
-            int leading_bit = 0;
-            uint16_t temp_mant = stage2.mant_b;
-            while(temp_mant && !(temp_mant & 0x80)) {
-                temp_mant <<= 1;
-                leading_bit++;
-            }
-            stage2.exp_b = 1 - leading_bit;
-            stage2.mant_b <<= leading_bit;
-        } else {
-            stage2.mant_b |= 0x80;
-        }
+        stage2.exp_result = stage1.exp_a + stage1.exp_b - 127;
+        stage2.mant_result = static_cast<uint32_t>(stage1.mant_a) * stage1.mant_b;
     }
 
-    // Stage 1: Input
+    // Stage 1: Input & Decomposition (Previously Stage 1 & 2)
     if (valid) {
         stage1.a = bf16_a;
         stage1.b = bf16_b;
         stage1.is_valid = true;
         stage1.is_special = check_special_cases(bf16_a, bf16_b, stage1.result);
+        
+        if (!stage1.is_special) {
+             decompose_bf16(stage1.a, stage1.sign_a, stage1.exp_a, stage1.mant_a);
+             decompose_bf16(stage1.b, stage1.sign_b, stage1.exp_b, stage1.mant_b);
+
+             stage1.sign_result = stage1.sign_a ^ stage1.sign_b;
+
+             if (stage1.exp_a == 0 && stage1.mant_a != 0) {
+                 int leading_bit = 0;
+                 uint16_t temp_mant = stage1.mant_a;
+                 while(temp_mant && !(temp_mant & 0x80)) {
+                     temp_mant <<= 1;
+                     leading_bit++;
+                 }
+                 stage1.exp_a = 1 - leading_bit;
+                 stage1.mant_a <<= leading_bit;
+             } else {
+                 stage1.mant_a |= 0x80;
+             }
+
+             if (stage1.exp_b == 0 && stage1.mant_b != 0) {
+                 int leading_bit = 0;
+                 uint16_t temp_mant = stage1.mant_b;
+                 while(temp_mant && !(temp_mant & 0x80)) {
+                     temp_mant <<= 1;
+                     leading_bit++;
+                 }
+                 stage1.exp_b = 1 - leading_bit;
+                 stage1.mant_b <<= leading_bit;
+             } else {
+                 stage1.mant_b |= 0x80;
+             }
+        }
+
     } else {
         stage1 = {};
     }
@@ -218,7 +214,7 @@ uint16_t BF16MultiplyPipeline::pop_output() {
 }
 
 bool BF16MultiplyPipeline::is_output_valid() const {
-    return stage5.is_valid;
+    return stage4.is_valid;
 }
 
 } // namespace bf16

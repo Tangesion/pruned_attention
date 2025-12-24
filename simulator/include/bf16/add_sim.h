@@ -6,6 +6,8 @@
 #include <deque>
 #include <stdexcept>
 
+#define ADD_PIPELINE_DEPTH 4
+
 namespace bf16 {
 
 class BF16AddPipeline final : public PE::Pipeline {
@@ -43,7 +45,6 @@ private:
     AddPipelineStage stage2;
     AddPipelineStage stage3;
     AddPipelineStage stage4;
-    AddPipelineStage stage5;
 
     const uint16_t POS_INF = 0x7F80;
     const uint16_t NEG_INF = 0xFF80;

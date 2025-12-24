@@ -1,8 +1,10 @@
 #include "PE/units/MacUnit.h"
 #include "PE/base/Pipeline.h"
 #include "PE/base/backend.h"
+#include "bf16/add_sim.h"
 #include <stdexcept>
 #include <memory>
+#include <vector>
 
 namespace PE {
 
@@ -24,13 +26,16 @@ void MacUnit::reset() {
     input_valid = false;
     
     multiply_queue.clear();
-    acc_queue.clear();
+    reset_queue.clear();
     outputs.clear();
 
-    acc_queue.push_back(0); // Initialize accumulator to zero
-    
+    // Initialize accumulator queue with zeros to prevent bubbles
+    acc_queue.clear();
+    for (size_t i = 0; i < ADD_PIPELINE_DEPTH; ++i) {
+        acc_queue.push_back(0);
+    }
+
     cycle_count = 0;
-    first_reset = true;
 }
 
 bool MacUnit::is_active() const {
@@ -46,7 +51,8 @@ void MacUnit::load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_fla
 
 void MacUnit::set_initial_acc(uint16_t initial_acc) {
     acc_queue.clear();
-    acc_queue.push_back(initial_acc);
+    for (size_t i = 0; i < ADD_PIPELINE_DEPTH; ++i)
+        acc_queue.push_back(initial_acc);
 }
 
 bool MacUnit::has_final_output() const {
@@ -81,14 +87,13 @@ void MacUnit::clock_cycle() {
 
         if (!reset_acc) {
             acc_val = acc_queue.front();
+            acc_queue.pop_front();
         } else {
-            if (!first_reset)
-                outputs.push_back(acc_queue.front());
-            first_reset = false;
-            set_initial_acc(0);
+            outputs.push_back(acc_queue.front());
+            acc_queue.pop_front();
+            acc_val = 0;
         }
         reset_queue.pop_front();
-        acc_queue.pop_front();
         multiply_queue.pop_front();
         add_unit->load_operands(mult_val, acc_val, true);
     } else {
@@ -103,7 +108,9 @@ void MacUnit::clock_cycle() {
     }
 
     mult_unit->load_operands(this->input1, this->input2, this->input_valid);
-    reset_queue.push_back(this->reset_flag);
+    if (this->input_valid) {
+        reset_queue.push_back(this->reset_flag);
+    }
     this->reset_flag = false;
     this->input_valid = false; 
     mult_unit->clock_cycle();

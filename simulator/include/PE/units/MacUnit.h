@@ -40,7 +40,6 @@ private:
     uint32_t cycle_count = 0;
 
     bool reset_flag = false;
-    bool first_reset = true;
     size_t interleave_depth = 1;
 };
 
