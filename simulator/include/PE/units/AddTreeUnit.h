@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <stack>
@@ -36,7 +37,9 @@ private:
     std::vector<std::vector<std::unique_ptr<AddUnit>>> tree;
 
     std::vector<bool> stage_valids;
-    std::vector<std::deque<size_t>> stage_outputs;
+    std::vector<std::deque<uint16_t>> stage_outputs;
+
+    std::deque<uint16_t> outputs;
     
     size_t input_num;
     size_t tree_height;

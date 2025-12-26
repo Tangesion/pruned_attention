@@ -1,6 +1,6 @@
 #pragma once
 #include "PE/scheduler/ComputeScheduler.h"
-#include "PE/units/MacArrayUnit.h"
+#include "PE/units/ReduceMacArrayUnit.h"
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -14,7 +14,7 @@ public:
         size_t num_pes;                   // Number of PEs in the MacArrayUnit
     };
 
-    GemvScheduler(std::unique_ptr<MacArrayUnit> unit, Config config);
+    GemvScheduler(std::unique_ptr<ReduceMacArrayUnit> unit, Config config);
 
     // Run single batch GEMV task
     // matrix: [K x N]
@@ -51,7 +51,7 @@ private:
     void simulate_memory_latency(size_t words_count);
     
     // Helper to access the component as MacArrayUnit
-    MacArrayUnit* get_mac_array();
+    ReduceMacArrayUnit* get_mac_array();
 };
 
 } // namespace PE

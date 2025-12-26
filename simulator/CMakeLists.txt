@@ -26,6 +26,7 @@ add_library(bf16_sim STATIC
     src/PE/units/MacArrayUnit.cpp
     src/PE/units/AddTreeUnit.cpp
     src/PE/units/ReduceMacUnit.cpp
+    src/PE/units/ReduceMacArrayUnit.cpp
     src/PE/scheduler/GemvScheduler.cpp
 )
 

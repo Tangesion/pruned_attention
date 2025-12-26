@@ -1,5 +1,5 @@
 #include "PE/scheduler/GemvScheduler.h"
-#include "PE/units/MacArrayUnit.h"
+#include "PE/units/ReduceMacArrayUnit.h"
 #include "bf16/add_sim.h"
 #include "bf16/multiply_sim.h"
 #include "bf16/bf16_basic_ops.h"
@@ -29,7 +29,7 @@ void test_single_batch_gemv() {
     auto mult_pipe_factory = []() { return std::make_unique<bf16::BF16MultiplyPipeline>(); };
     auto add_pipe_factory = []() { return std::make_unique<bf16::BF16AddPipeline>(); };
     
-    auto mac_array = std::make_unique<MacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
+    auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
     GemvScheduler::Config config{bandwidth, num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);

@@ -26,7 +26,7 @@ AddTreeUnit::AddTreeUnit(PipelineFactory add_pipe_factory, size_t input_num)
         }
         level_size /= 2;
     }
-    stage_outputs.assign(tree_height + 1, std::deque<size_t>());
+    stage_outputs.assign(tree_height + 1, std::deque<uint16_t>());
     stage_valids.assign(tree_height + 1, false);
 }
 
@@ -37,7 +37,7 @@ void AddTreeUnit::reset() {
         }
     }
     stage_outputs.clear();
-    stage_outputs.resize(tree_height + 1, std::deque<size_t>());
+    stage_outputs.resize(tree_height + 1, std::deque<uint16_t>());
     stage_valids.clear();
     stage_valids.resize(tree_height + 1, false);
     cycle_count = 0;
@@ -60,6 +60,11 @@ void AddTreeUnit::load_inputs(const std::vector<uint16_t>& inputs, const bool va
 }
 
 bool AddTreeUnit::is_active() const {
+
+    for (const auto& valid : stage_valids) {
+        if (valid) return true;
+    }
+
     for (const auto& level : tree) {
         for (const auto& unit : level) {
             if (unit && unit->is_active()) return true;
@@ -69,17 +74,16 @@ bool AddTreeUnit::is_active() const {
 }
 
 bool AddTreeUnit::has_output() const {
-    if (stage_outputs.empty()) return false;
-    return !stage_outputs[tree_height].empty();
+    return !outputs.empty();
 }
 
 uint16_t AddTreeUnit::get_output() {
     if (!has_output()) {
         throw std::runtime_error("AddTreeUnit::get_output: no output available");
     }
-    uint16_t v = static_cast<uint16_t>(stage_outputs[tree_height].front());
-    stage_outputs[tree_height].pop_front();
-    return v;
+    uint16_t val = outputs.front();
+    outputs.pop_front();
+    return val;
 }
 
 
@@ -124,6 +128,10 @@ void AddTreeUnit::clock_cycle() {
             stage_valids[i + 1] = false;
             stage_outputs[i + 1].clear();
         }
+    }
+
+    if (stage_valids.back()) {
+        outputs.push_back(stage_outputs.back().front());
     }
     
 }

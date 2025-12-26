@@ -1,5 +1,5 @@
 #include "PE/scheduler/GemvScheduler.h"
-#include "PE/units/MacArrayUnit.h"
+#include "PE/units/ReduceMacArrayUnit.h"
 #include "bf16/add_sim.h"
 #include "bf16/multiply_sim.h"
 #include "bf16/bf16_basic_ops.h"
@@ -74,7 +74,7 @@ void run_test(size_t K, size_t N, size_t num_pes) {
     // 4. Setup Scheduler
     auto mult_pipe_factory = []() { return std::make_unique<bf16::BF16MultiplyPipeline>(); };
     auto add_pipe_factory = []() { return std::make_unique<bf16::BF16AddPipeline>(); };
-    auto mac_array = std::make_unique<MacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
+    auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
     GemvScheduler::Config config{32.0, num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);
@@ -159,7 +159,7 @@ int main() {
 
     // 5. 混合情况：较大规模随机测试
     // Matrix 64x128, PE=16
-    run_test(64, 128, 16);
+    run_test(127, 61, 16);
     
     // 6. 极小情况
     run_test(1, 1, 1);

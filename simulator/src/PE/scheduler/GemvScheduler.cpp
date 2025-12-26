@@ -1,17 +1,18 @@
 #include "PE/scheduler/GemvScheduler.h"
+#include "bf16/add_sim.h"
 #include <cstdint>
 #include <iostream>
 #include <vector>
 
 namespace PE {
 
-GemvScheduler::GemvScheduler(std::unique_ptr<MacArrayUnit> unit, Config config)
+GemvScheduler::GemvScheduler(std::unique_ptr<ReduceMacArrayUnit> unit, Config config)
     : ComputeScheduler(std::move(unit)), config(config) {
         reset();
     }
 
-MacArrayUnit* GemvScheduler::get_mac_array() {
-    return static_cast<MacArrayUnit*>(hardware_component.get());
+ReduceMacArrayUnit* GemvScheduler::get_mac_array() {
+    return static_cast<ReduceMacArrayUnit*>(hardware_component.get());
 }
 
 std::vector<uint16_t> GemvScheduler::run_gemv(
@@ -30,12 +31,12 @@ std::vector<uint16_t> GemvScheduler::run_gemv(
             std::vector<std::pair<uint16_t, uint16_t>> inputs;
             std::vector<bool> valids;
             std::vector<bool> reset_flags;
-            bool is_start_of_col = (k == 0);
+            bool reset_flag = (n_start > 0) && (k < 4);
             for (size_t p = 0; p < num_pes; ++p) {
                 if (p < current_batch_size) {
                     inputs.emplace_back(matrix[k][n_start + p], input[k]);
                     valids.push_back(true);
-                    reset_flags.push_back(is_start_of_col);
+                    reset_flags.push_back(reset_flag);
                 } else {
                     inputs.emplace_back(0, 0);
                     valids.push_back(false);
@@ -48,14 +49,17 @@ std::vector<uint16_t> GemvScheduler::run_gemv(
     }
     // Phase 2: Final Flush & Drain Phase
     {
-        std::vector<std::pair<uint16_t, uint16_t>> flush_in(num_pes, {0, 0});
-        std::vector<bool> flush_v(num_pes, true); 
-        std::vector<bool> flush_r(num_pes, true);
-        get_mac_array()->load_inputs(flush_in, flush_v, flush_r);
-        clock_cycle();
+        for (size_t i = 0; i < ADD_PIPELINE_DEPTH; i++) {
+            std::vector<std::pair<uint16_t, uint16_t>> flush_in(num_pes, {0, 0});
+            std::vector<bool> flush_v(num_pes, true); 
+            std::vector<bool> flush_r(num_pes, true);
+            get_mac_array()->load_inputs(flush_in, flush_v, flush_r);
+            clock_cycle();
+        }
     }
 
     while (get_mac_array()->is_active()) {
+    //for (int i = 0; i < 100; ++i){}
         get_mac_array()->load_inputs(
             std::vector<std::pair<uint16_t, uint16_t>>(num_pes, {0, 0}),
             std::vector<bool>(num_pes, false),
