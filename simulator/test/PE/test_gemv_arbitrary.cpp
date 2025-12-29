@@ -164,5 +164,7 @@ int main() {
     // 6. 极小情况
     run_test(1, 1, 1);
 
+    run_test(128, 128, 1024);
+
     return 0;
 }

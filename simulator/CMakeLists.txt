@@ -57,3 +57,6 @@ target_link_libraries(test_gemv_scheduler bf16_sim)
 
 add_executable(test_gemv_arbitrary test/PE/test_gemv_arbitrary.cpp)
 target_link_libraries(test_gemv_arbitrary bf16_sim)
+
+add_executable(test_gemv_multibatch test/PE/test_gemv_multibatch.cpp)
+target_link_libraries(test_gemv_multibatch bf16_sim)
