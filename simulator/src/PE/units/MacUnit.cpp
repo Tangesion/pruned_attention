@@ -8,7 +8,7 @@
 
 namespace PE {
 
-MacUnit::MacUnit(PipelinePtr mult_pipe, PipelinePtr add_pipe)
+MacUnit::MacUnit(PipelinePtr<uint16_t> mult_pipe, PipelinePtr<uint16_t> add_pipe)
     : mult_unit(std::make_unique<MultiplyUnit>(std::move(mult_pipe))),
       add_unit(std::make_unique<AddUnit>(std::move(add_pipe))) {
     if (!mult_unit || !add_unit) {
@@ -122,7 +122,7 @@ void MacUnit::clock_cycle() {
 
 class MacUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr>&& pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const override {
         if (pipes.size() != 2) {
             throw std::invalid_argument("MacUnitCreator expects exactly two pipelines.");
         }

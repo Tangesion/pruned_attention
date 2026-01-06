@@ -12,7 +12,7 @@ namespace PE {
 
 class ReduceMacUnit : public ComputeComponent {
 public:
-    using PipelineFactory = std::function<PipelinePtr()>;
+    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
     
     ReduceMacUnit(PipelineFactory mult_pipe_factory, PipelineFactory add_pipe_factory);
     

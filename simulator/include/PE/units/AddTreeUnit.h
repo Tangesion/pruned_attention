@@ -18,7 +18,7 @@ namespace PE {
 class AddTreeUnit : public ComputeComponent {
 
 public:
-    using PipelineFactory = std::function<PipelinePtr()>;
+    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
     AddTreeUnit(PipelineFactory add_pipe_factory, size_t input_num);
     void reset() override;
     bool is_active() const override;

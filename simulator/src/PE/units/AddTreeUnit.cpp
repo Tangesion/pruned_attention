@@ -21,7 +21,7 @@ AddTreeUnit::AddTreeUnit(PipelineFactory add_pipe_factory, size_t input_num)
     for (size_t level = 0; level < tree_height; ++level) {
         tree[level].reserve(level_size);
         for (size_t i = 0; i < level_size; ++i) {
-            PipelinePtr p = add_pipe_factory();
+            PipelinePtr<uint16_t> p = add_pipe_factory();
             tree[level].push_back(std::make_unique<AddUnit>(std::move(p)));
         }
         level_size /= 2;

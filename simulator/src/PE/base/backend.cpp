@@ -19,7 +19,7 @@ void Backend::addCreator(const std::string& name, Creator *creator) {
     map->insert(std::make_pair(name, creator)); 
 }
 
-ComputeComponent* Backend::onCreate(const std::string& name, std::vector<PipelinePtr>&& pipes) const {
+ComputeComponent* Backend::onCreate(const std::string& name, std::vector<PipelinePtr<uint16_t>>&& pipes) const {
     if (!gCreator) return nullptr;
     auto it = gCreator->find(name);
     if (it == gCreator->end()) {

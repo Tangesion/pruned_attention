@@ -10,11 +10,11 @@ namespace PE {
 
 class MultiplyUnit : public ComputeComponent {
 private:
-    PipelinePtr pipeline;
+    PipelinePtr<uint16_t> pipeline;
     TwoOperandInput current_input;
 
 public:
-    explicit MultiplyUnit(PipelinePtr p);
+    explicit MultiplyUnit(PipelinePtr<uint16_t> p);
 
     void reset() override;
 

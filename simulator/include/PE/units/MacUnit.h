@@ -10,7 +10,7 @@ namespace PE {
 
 class MacUnit : public ComputeComponent {
 public:
-    MacUnit(PipelinePtr mult_pipe, PipelinePtr add_pipe);
+    MacUnit(PipelinePtr<uint16_t> mult_pipe, PipelinePtr<uint16_t> add_pipe);
     void reset() override;
     bool is_active() const override;
     void clock_cycle() override;

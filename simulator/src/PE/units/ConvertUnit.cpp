@@ -5,7 +5,7 @@
 
 namespace PE {
 
-ConvertUnit::ConvertUnit(PipelinePtr p) : pipeline(std::move(p)) {
+ConvertUnit::ConvertUnit(PipelinePtr<uint16_t> p) : pipeline(std::move(p)) {
     if (!pipeline) {
         throw std::invalid_argument("ConvertUnit received a null pipeline.");
     }
@@ -40,7 +40,7 @@ bool ConvertUnit::has_output() const {
 
 class ConvertUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr>&& pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const override {
         if (pipes.size() != 1) {
             throw std::invalid_argument("ConvertUnitCreator expects exactly one pipeline.");
         }

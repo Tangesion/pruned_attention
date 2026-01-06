@@ -8,7 +8,7 @@
 
 namespace bf16 {
 
-class BF16MultiplyPipeline final : public PE::Pipeline {
+class BF16MultiplyPipeline final : public PE::Pipeline<uint16_t> {
 public:
     BF16MultiplyPipeline();
     void reset() override;

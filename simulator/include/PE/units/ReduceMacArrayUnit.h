@@ -11,7 +11,7 @@ namespace PE {
 
 class ReduceMacArrayUnit : public ComputeComponent {
 public:
-    using PipelineFactory = std::function<PipelinePtr()>;
+    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
     
     ReduceMacArrayUnit(PipelineFactory mult_pipe_factory, PipelineFactory add_pipe_factory, size_t array_size);
     

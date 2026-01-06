@@ -10,11 +10,11 @@ namespace PE {
 
 class AddUnit : public ComputeComponent {
 private:
-    PipelinePtr pipeline;
+    PipelinePtr<uint16_t> pipeline;
     TwoOperandInput current_input;
 
 public:
-    explicit AddUnit(PipelinePtr p);
+    explicit AddUnit(PipelinePtr<uint16_t> p);
 
     void reset() override;
 

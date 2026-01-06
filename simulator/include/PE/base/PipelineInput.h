@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <vector>
 
 namespace PE {
 
@@ -22,6 +23,15 @@ struct ConvertInput : PipelineInput {
 // A possible future input struct for three-operand operations
 struct ThreeOperandInput : PipelineInput {
     uint16_t a, b, c;
+    bool valid = false;
 };
+
+// Input vector
+struct VectorInput : PipelineInput {
+    std::vector<uint16_t> values;
+    bool valid = false;
+    int param = 0;
+};
+
 
 } // namespace PE

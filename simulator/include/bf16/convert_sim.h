@@ -19,7 +19,7 @@ struct ConvertPipelineStage {
     uint16_t bf16_val;
 };
 
-class BF16ConvertPipeline final : public PE::Pipeline {
+class BF16ConvertPipeline final : public PE::Pipeline<uint16_t> {
 public:
     BF16ConvertPipeline();
     void reset() override;

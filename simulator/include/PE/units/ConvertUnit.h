@@ -10,11 +10,11 @@ namespace PE {
 
 class ConvertUnit : public ComputeComponent {
 private:
-    PipelinePtr pipeline;
+    PipelinePtr<uint16_t> pipeline;
     ConvertInput current_input;
 
 public:
-    explicit ConvertUnit(PipelinePtr p);
+    explicit ConvertUnit(PipelinePtr<uint16_t> p);
 
     void reset() override;
 

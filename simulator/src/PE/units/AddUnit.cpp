@@ -6,7 +6,7 @@
 
 namespace PE {
 
-AddUnit::AddUnit(PipelinePtr p) : pipeline(std::move(p)) {
+AddUnit::AddUnit(PipelinePtr<uint16_t> p) : pipeline(std::move(p)) {
     if (!pipeline) {
         throw std::invalid_argument("AddUnit received a null pipeline.");
     }
@@ -43,7 +43,7 @@ bool AddUnit::has_output() const {
 
 class AddUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr> &&pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>> &&pipes) const override {
         if (pipes.size() != 1) {
             throw std::invalid_argument("AddUnitCreator expects exactly one pipeline.");
         }

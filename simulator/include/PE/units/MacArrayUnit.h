@@ -11,7 +11,7 @@ namespace PE {
 
 class MacArrayUnit: public ComputeComponent {
 public:
-    using PipelineFactory = std::function<PipelinePtr()>;
+    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
     MacArrayUnit(PipelineFactory mult_pipe_factory, PipelineFactory add_pipe_factory, size_t array_size);
     void reset() override;
     bool is_active() const override;

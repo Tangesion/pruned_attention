@@ -10,7 +10,7 @@
 
 namespace bf16 {
 
-class BF16AddPipeline final : public PE::Pipeline {
+class BF16AddPipeline final : public PE::Pipeline<uint16_t> {
 public:
     BF16AddPipeline();
     void reset() override;

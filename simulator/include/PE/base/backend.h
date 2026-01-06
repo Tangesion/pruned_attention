@@ -11,12 +11,12 @@ namespace PE {
 
 class Backend {
 public:
-    virtual ComputeComponent* onCreate(const std::string& name, std::vector<PipelinePtr>&& pipes) const;
+    virtual ComputeComponent* onCreate(const std::string& name, std::vector<PipelinePtr<uint16_t>>&& pipes) const;
 
 public:
     class Creator {
     public:
-        virtual ComputeComponent* onCreate(std::vector<PipelinePtr>&& pipes) const = 0;
+        virtual ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const = 0;
     };
 
     static void addCreator(const std::string& name, Creator* creator);
