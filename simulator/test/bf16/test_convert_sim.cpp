@@ -23,7 +23,7 @@ void test_pipeline_conversion() {
 
     assert(unit.has_output());
 
-    uint16_t bf16_val = unit.get_result();
+    uint16_t bf16_val = unit.get_result().as_uint16();
     float converted_val = bf16::bf16_to_float(bf16_val);
     assert(std::abs(test_val_f - converted_val) < 0.01);
 

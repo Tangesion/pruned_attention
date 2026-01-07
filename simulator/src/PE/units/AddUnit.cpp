@@ -6,7 +6,7 @@
 
 namespace PE {
 
-AddUnit::AddUnit(PipelinePtr<uint16_t> p) : pipeline(std::move(p)) {
+AddUnit::AddUnit(PipelinePtr<Number> p) : pipeline(std::move(p)) {
     if (!pipeline) {
         throw std::invalid_argument("AddUnit received a null pipeline.");
     }
@@ -26,13 +26,13 @@ void AddUnit::clock_cycle() {
     current_input.valid = false;
 }
 
-void AddUnit::load_operands(uint16_t a, uint16_t b, bool valid) {
+void AddUnit::load_operands(Number a, Number b, bool valid) {
     current_input.a = a;
     current_input.b = b;
     current_input.valid = valid;
 }
 
-uint16_t AddUnit::get_result() {
+Number AddUnit::get_result() {
     return pipeline->pop_output();
 }
 
@@ -43,7 +43,7 @@ bool AddUnit::has_output() const {
 
 class AddUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>> &&pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<Number>> &&pipes) const override {
         if (pipes.size() != 1) {
             throw std::invalid_argument("AddUnitCreator expects exactly one pipeline.");
         }

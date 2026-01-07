@@ -2,6 +2,7 @@
 #define ADD_SIM_H
 
 #include "PE/base/Pipeline.h"
+#include "PE/base/DataType.h"
 #include <cstdint>
 #include <deque>
 #include <stdexcept>
@@ -10,13 +11,13 @@
 
 namespace bf16 {
 
-class BF16AddPipeline final : public PE::Pipeline<uint16_t> {
+class BF16AddPipeline final : public PE::Pipeline<PE::Number> {
 public:
     BF16AddPipeline();
     void reset() override;
     void clock_cycle(const PE::PipelineInput& input) override;
-    const std::deque<uint16_t>& get_outputs() const override;
-    uint16_t pop_output() override;
+    const std::deque<PE::Number>& get_outputs() const override;
+    PE::Number pop_output() override;
     bool is_active() const override;
 
 private:

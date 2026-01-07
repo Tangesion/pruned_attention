@@ -36,7 +36,7 @@ bool ReduceMacArrayUnit::is_active() const {
     return false;
 }
 
-void ReduceMacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>& inputs, const std::vector<bool>& valids, const std::vector<bool>& reset_flags) {
+void ReduceMacArrayUnit::load_inputs(const std::vector<std::pair<Number, Number>>& inputs, const std::vector<bool>& valids, const std::vector<bool>& reset_flags) {
     if (inputs.size() != size || valids.size() != size) {
         std::cerr << "[ERROR] Input size mismatch in ReduceMacArrayUnit" << std::endl;
         throw std::invalid_argument("Input size does not match ReduceMacArrayUnit size.");
@@ -55,7 +55,7 @@ bool ReduceMacArrayUnit::has_output(size_t index) const {
     return reduce_mac_units[index]->has_output();
 }
 
-uint16_t ReduceMacArrayUnit::pop_output(size_t index) {
+Number ReduceMacArrayUnit::pop_output(size_t index) {
     if (index >= size) {
         std::cerr << "[ERROR] Index out of range: " << index << std::endl;
         throw std::out_of_range("Index out of range in ReduceMacArrayUnit.");

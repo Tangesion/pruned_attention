@@ -3,6 +3,7 @@
 #include "PE/base/ComputeComponent.h"
 #include "PE/base/Pipeline.h"
 #include "PE/base/PipelineInput.h"
+#include "PE/base/DataType.h"
 #include "bf16/convert_sim.h"
 #include <memory>
 
@@ -10,11 +11,11 @@ namespace PE {
 
 class ConvertUnit : public ComputeComponent {
 private:
-    PipelinePtr<uint16_t> pipeline;
+    PipelinePtr<Number> pipeline;
     ConvertInput current_input;
 
 public:
-    explicit ConvertUnit(PipelinePtr<uint16_t> p);
+    explicit ConvertUnit(PipelinePtr<Number> p);
 
     void reset() override;
 
@@ -24,7 +25,7 @@ public:
 
     void load_operand(uint32_t val, bool valid);
 
-    uint16_t get_result();
+    Number get_result();
 
     bool has_output() const;
 };

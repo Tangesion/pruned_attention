@@ -8,7 +8,7 @@
 
 namespace PE {
 
-MacUnit::MacUnit(PipelinePtr<uint16_t> mult_pipe, PipelinePtr<uint16_t> add_pipe)
+MacUnit::MacUnit(PipelinePtr<Number> mult_pipe, PipelinePtr<Number> add_pipe)
     : mult_unit(std::make_unique<MultiplyUnit>(std::move(mult_pipe))),
       add_unit(std::make_unique<AddUnit>(std::move(add_pipe))) {
     if (!mult_unit || !add_unit) {
@@ -21,8 +21,8 @@ void MacUnit::reset() {
     mult_unit->reset();
     add_unit->reset();
     
-    input1 = 0;
-    input2 = 0;
+    input1 = Number(); // Default 0
+    input2 = Number(); // Default 0
     input_valid = false;
     
     multiply_queue.clear();
@@ -32,7 +32,7 @@ void MacUnit::reset() {
     // Initialize accumulator queue with zeros to prevent bubbles
     acc_queue.clear();
     for (size_t i = 0; i < ADD_PIPELINE_DEPTH; ++i) {
-        acc_queue.push_back(0);
+        acc_queue.push_back(Number()); // Default 0 (UInt16)
     }
 
     cycle_count = 0;
@@ -42,14 +42,14 @@ bool MacUnit::is_active() const {
     return mult_unit->is_active() || add_unit->is_active();
 }
 
-void MacUnit::load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_flag) {
+void MacUnit::load_inputs(Number in1, Number in2, bool valid, bool reset_flag) {
     this->input1 = in1;
     this->input2 = in2;
     this->input_valid = valid;
     this->reset_flag = reset_flag;
 }
 
-void MacUnit::set_initial_acc(uint16_t initial_acc) {
+void MacUnit::set_initial_acc(Number initial_acc) {
     acc_queue.clear();
     for (size_t i = 0; i < ADD_PIPELINE_DEPTH; ++i)
         acc_queue.push_back(initial_acc);
@@ -59,18 +59,18 @@ bool MacUnit::has_final_output() const {
     return !outputs.empty();
 }
 
-uint16_t MacUnit::get_final_output() {
+Number MacUnit::get_final_output() {
     if (outputs.empty()) {
         throw std::runtime_error("No final output available from MacUnit.");
     }
-    uint16_t val = outputs.front();
+    Number val = outputs.front();
     outputs.pop_front();
     return val;
 }
 
-uint16_t MacUnit::get_accumulated_result() const {
+Number MacUnit::get_accumulated_result() const {
     if (acc_queue.empty()) {
-        return 0;
+        return Number(); // Default 0
     }
     return acc_queue.front();
 }
@@ -81,9 +81,9 @@ void MacUnit::clock_cycle() {
     bool add_inputs_valid = !acc_queue.empty() && !multiply_queue.empty();
     
     if (add_inputs_valid) {
-        uint16_t mult_val = multiply_queue.front();
+        Number mult_val = multiply_queue.front();
         bool reset_acc = reset_queue.front();
-        uint16_t acc_val = 0;
+        Number acc_val = Number();
 
         if (!reset_acc) {
             acc_val = acc_queue.front();
@@ -91,18 +91,18 @@ void MacUnit::clock_cycle() {
         } else {
             outputs.push_back(acc_queue.front());
             acc_queue.pop_front();
-            acc_val = 0;
+            acc_val = Number(); // Reset to 0
         }
         reset_queue.pop_front();
         multiply_queue.pop_front();
         add_unit->load_operands(mult_val, acc_val, true);
     } else {
-        add_unit->load_operands(0, 0, false);
+        add_unit->load_operands(Number(), Number(), false);
     }
 
     add_unit->clock_cycle();
     if (add_unit->has_output()) {
-        uint16_t add_result = add_unit->get_result();
+        Number add_result = add_unit->get_result();
         acc_queue.push_back(add_result);
         //outputs.push_back(add_result);
     }
@@ -122,7 +122,7 @@ void MacUnit::clock_cycle() {
 
 class MacUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<Number>>&& pipes) const override {
         if (pipes.size() != 2) {
             throw std::invalid_argument("MacUnitCreator expects exactly two pipelines.");
         }

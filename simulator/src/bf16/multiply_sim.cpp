@@ -67,8 +67,9 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
 
     const auto* two_op_input = dynamic_cast<const PE::TwoOperandInput*>(&input);
     bool valid = two_op_input && two_op_input->valid;
-    uint16_t bf16_a = valid ? two_op_input->a : 0;
-    uint16_t bf16_b = valid ? two_op_input->b : 0;
+    // Extract uint16_t from Number
+    uint16_t bf16_a = valid ? two_op_input->a.as_uint16() : 0;
+    uint16_t bf16_b = valid ? two_op_input->b.as_uint16() : 0;
 
     // Stage 4: Normalization and Output (Previously Stage 5)
     stage4.is_valid = stage3.is_valid;
@@ -132,7 +133,7 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
                 }
             }
         }
-        outputs.push_back(result_bf16);
+        outputs.push_back(PE::Number(result_bf16));
     }
 
     // Stage 3: Rounding (Previously Stage 4)
@@ -200,15 +201,15 @@ void BF16MultiplyPipeline::clock_cycle(const PE::PipelineInput& input) {
     }
 }
 
-const std::deque<uint16_t>& BF16MultiplyPipeline::get_outputs() const {
+const std::deque<PE::Number>& BF16MultiplyPipeline::get_outputs() const {
     return outputs;
 }
 
-uint16_t BF16MultiplyPipeline::pop_output() {
+PE::Number BF16MultiplyPipeline::pop_output() {
     if (outputs.empty()) {
         throw std::runtime_error("No outputs available to pop.");
     }
-    uint16_t val = outputs.front();
+    PE::Number val = outputs.front();
     outputs.pop_front();
     return val;
 }

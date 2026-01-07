@@ -13,7 +13,7 @@ void test_pipeline_multiplication() {
     uint16_t a_bf16 = bf16::float_to_bf16(2.5f);
     uint16_t b_bf16 = bf16::float_to_bf16(3.5f);
 
-    unit.load_operands(a_bf16, b_bf16, true);
+    unit.load_operands(PE::Number(a_bf16), PE::Number(b_bf16), true);
     unit.clock_cycle();
 
     for(int i = 0; i < 5; ++i) { // flush the pipeline
@@ -22,7 +22,7 @@ void test_pipeline_multiplication() {
     
     assert(unit.has_output());
 
-    uint16_t mul_res = unit.get_result();
+    uint16_t mul_res = unit.get_result().as_uint16();
     assert(std::abs(bf16::bf16_to_float(mul_res) - 8.75f) < 0.01);
 
     std::cout << "Pipeline multiplication test passed." << std::endl;

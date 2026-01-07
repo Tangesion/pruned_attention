@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include "PE/base/DataType.h"
 
 namespace PE {
 
@@ -10,32 +11,20 @@ struct PipelineInput {
     bool valid = false;
 };
 
-// Input struct for two-operand operations
+// Input struct for two-operand operations (using Generic Number)
 struct TwoOperandInput : PipelineInput {
-    uint16_t a, b;
+    Number a, b;
     bool valid = false;
 };
 
-// Input struct for two-operand operations with 32-bit operands
-struct TwoOperandInput32 : PipelineInput {
-    int32_t a, b;
-    bool valid = false;
-};
-
-// Input struct for fp32 conversion operations
+// Input struct for fp32 conversion operations (kept as is for specific ops, or could use Number)
 struct ConvertInput : PipelineInput {
     uint32_t val;
 };
 
-// A possible future input struct for three-operand operations
-struct ThreeOperandInput : PipelineInput {
-    uint16_t a, b, c;
-    bool valid = false;
-};
-
-// Input vector
+// Vector Input (Updated to use Number)
 struct VectorInput : PipelineInput {
-    std::vector<uint16_t> values;
+    std::vector<Number> values;
     bool valid = false;
     int param = 0;
 };

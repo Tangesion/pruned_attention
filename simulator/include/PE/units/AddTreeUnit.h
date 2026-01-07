@@ -10,6 +10,7 @@
 #include <functional>
 #include "PE/base/ComputeComponent.h"
 #include "PE/base/Pipeline.h"
+#include "PE/base/DataType.h"
 #include "PE/units/AddUnit.h"
 
 
@@ -18,7 +19,7 @@ namespace PE {
 class AddTreeUnit : public ComputeComponent {
 
 public:
-    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
+    using PipelineFactory = std::function<PipelinePtr<Number>()>;
     AddTreeUnit(PipelineFactory add_pipe_factory, size_t input_num);
     void reset() override;
     bool is_active() const override;
@@ -27,8 +28,8 @@ public:
     // Check if the final result is ready
     bool has_output() const;
     // Get the final result
-    uint16_t get_output();
-    void load_inputs(const std::vector<uint16_t>& inputs, const bool valid);
+    Number get_output();
+    void load_inputs(const std::vector<Number>& inputs, const bool valid);
 
 private:
 
@@ -37,9 +38,9 @@ private:
     std::vector<std::vector<std::unique_ptr<AddUnit>>> tree;
 
     std::vector<bool> stage_valids;
-    std::vector<std::deque<uint16_t>> stage_outputs;
+    std::vector<std::deque<Number>> stage_outputs;
 
-    std::deque<uint16_t> outputs;
+    std::deque<Number> outputs;
     
     size_t input_num;
     size_t tree_height;

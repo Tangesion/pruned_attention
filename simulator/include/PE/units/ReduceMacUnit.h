@@ -2,6 +2,7 @@
 #include "PE/base/ComputeComponent.h"
 #include "PE/units/MacArrayUnit.h"
 #include "PE/units/AddTreeUnit.h"
+#include "PE/base/DataType.h"
 #include <cstdint>
 #include <deque>
 #include <vector>
@@ -12,7 +13,7 @@ namespace PE {
 
 class ReduceMacUnit : public ComputeComponent {
 public:
-    using PipelineFactory = std::function<PipelinePtr<uint16_t>()>;
+    using PipelineFactory = std::function<PipelinePtr<Number>()>;
     
     ReduceMacUnit(PipelineFactory mult_pipe_factory, PipelineFactory add_pipe_factory);
     
@@ -21,18 +22,18 @@ public:
     void clock_cycle() override;
 
     // Load inputs for the MacArray
-    void load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_flag=false);
+    void load_inputs(Number in1, Number in2, bool valid, bool reset_flag=false);
 
     // Check and get final reduced result
     bool has_output() const;
-    uint16_t get_output();
+    Number get_output();
 
 private:
     std::unique_ptr<MacUnit> mac_unit;
     std::unique_ptr<AddTreeUnit> add_tree;
     size_t cycle_count = 0;
 
-    std::deque<uint16_t> mac_outputs;
+    std::deque<Number> mac_outputs;
 };
 
 } // namespace PE

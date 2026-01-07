@@ -38,7 +38,7 @@ void run_mac_test(const std::string& test_name,
     // Helper to collect outputs
     auto collect = [&](PE::MacUnit& unit) {
         while (unit.has_final_output()) {
-            received_results.push_back(bf16::bf16_to_float(unit.get_final_output()));
+            received_results.push_back(bf16::bf16_to_float(unit.get_final_output().as_uint16()));
         }
     };
 
@@ -49,7 +49,7 @@ void run_mac_test(const std::string& test_name,
     for (const auto& in : inputs) {
         cycle++;
         if (in.valid) {
-            mac.load_inputs(bf16::float_to_bf16(in.a), bf16::float_to_bf16(in.b), true, in.reset);
+            mac.load_inputs(PE::Number(bf16::float_to_bf16(in.a)), PE::Number(bf16::float_to_bf16(in.b)), true, in.reset);
             // Count actual work (ignoring padding/dummy zeros if desired, 
             // but usually we count all valid cycles as 'ops' in hardware)
             // Here let's count only the inputs that weren't resets or paddings for a strict 'useful work' metric,
@@ -57,7 +57,7 @@ void run_mac_test(const std::string& test_name,
             // For simplicity, let's count cycles where a valid multiplication was requested.
             actual_ops++;
         } else {
-            mac.load_inputs(0, 0, false, false);
+            mac.load_inputs(PE::Number(), PE::Number(), false, false);
         }
         mac.clock_cycle();
         collect(mac);
@@ -70,7 +70,7 @@ void run_mac_test(const std::string& test_name,
     while (mac.is_active()) {
         cycle++;
         drain_cycles++;
-        mac.load_inputs(0, 0, false, false);
+        mac.load_inputs(PE::Number(), PE::Number(), false, false);
         mac.clock_cycle();
         collect(mac);
         

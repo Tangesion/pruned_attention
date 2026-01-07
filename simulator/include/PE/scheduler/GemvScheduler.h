@@ -34,15 +34,11 @@ public:
         const std::vector<std::vector<uint16_t>>& inputs
     );
 
-    // Run multiple batches like multi-batches input single matrix GEMV task
-    // matrix: [K x N]
-    // inputs: [B x 1 x K]
-    // return: [B x 1 x N]
-    std::vector<std::vector<uint16_t>> run_gemv(
+    // Run single batch GEMV task returning int32
+    std::vector<int32_t> run_gemv_int32(
         const std::vector<std::vector<uint16_t>>& matrix, 
-        const std::vector<std::vector<uint16_t>>& inputs
+        const std::vector<uint16_t>& input
     );
-
 
 private:
     Config config;
@@ -52,6 +48,17 @@ private:
     
     // Helper to access the component as MacArrayUnit
     ReduceMacArrayUnit* get_mac_array();
+
+    // Internal implementations returning Generic Number
+    std::vector<Number> run_gemv_impl(
+        const std::vector<std::vector<uint16_t>>& matrix, 
+        const std::vector<uint16_t>& input
+    );
+
+    std::vector<std::vector<Number>> run_gemv_impl_multibatch(
+        const std::vector<std::vector<std::vector<uint16_t>>>& matrices, 
+        const std::vector<std::vector<uint16_t>>& inputs
+    );
 };
 
 } // namespace PE

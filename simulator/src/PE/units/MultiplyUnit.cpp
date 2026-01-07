@@ -4,7 +4,7 @@
 
 namespace PE {
 
-MultiplyUnit::MultiplyUnit(PipelinePtr<uint16_t> p) : pipeline(std::move(p)) {
+MultiplyUnit::MultiplyUnit(PipelinePtr<Number> p) : pipeline(std::move(p)) {
     if (!pipeline) {
         throw std::invalid_argument("MultiplyUnit received a null pipeline.");
     }
@@ -24,13 +24,13 @@ void MultiplyUnit::clock_cycle() {
     current_input.valid = false;
 }
 
-void MultiplyUnit::load_operands(uint16_t a, uint16_t b, bool valid) {
+void MultiplyUnit::load_operands(Number a, Number b, bool valid) {
     current_input.a = a;
     current_input.b = b;
     current_input.valid = valid;
 }
 
-uint16_t MultiplyUnit::get_result() {
+Number MultiplyUnit::get_result() {
     return pipeline->pop_output();
 }
 
@@ -40,7 +40,7 @@ bool MultiplyUnit::has_output() const {
 
 class MultiplyUnitCreator : public Backend::Creator {
 public:
-    ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const override {
+    ComputeComponent* onCreate(std::vector<PipelinePtr<Number>>&& pipes) const override {
         if (pipes.size() != 1) {
             throw std::invalid_argument("MultiplyUnitCreator expects exactly one pipeline.");
         }

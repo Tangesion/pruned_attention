@@ -6,17 +6,18 @@
 #include <vector>
 #include "PE/base/ComputeComponent.h"
 #include "PE/base/Pipeline.h"
+#include "PE/base/DataType.h"
 
 namespace PE {
 
 class Backend {
 public:
-    virtual ComputeComponent* onCreate(const std::string& name, std::vector<PipelinePtr<uint16_t>>&& pipes) const;
+    virtual ComputeComponent* onCreate(const std::string& name, std::vector<PipelinePtr<Number>>&& pipes) const;
 
 public:
     class Creator {
     public:
-        virtual ComputeComponent* onCreate(std::vector<PipelinePtr<uint16_t>>&& pipes) const = 0;
+        virtual ComputeComponent* onCreate(std::vector<PipelinePtr<Number>>&& pipes) const = 0;
     };
 
     static void addCreator(const std::string& name, Creator* creator);

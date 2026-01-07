@@ -13,7 +13,7 @@ void test_pipeline_addition() {
     uint16_t a_bf16 = bf16::float_to_bf16(2.5f);
     uint16_t b_bf16 = bf16::float_to_bf16(3.5f);
 
-    unit.load_operands(a_bf16, b_bf16, true);
+    unit.load_operands(PE::Number(a_bf16), PE::Number(b_bf16), true);
     unit.clock_cycle();
 
     for(int i = 0; i < 5; ++i) { // flush the pipeline
@@ -22,8 +22,8 @@ void test_pipeline_addition() {
     
     assert(unit.has_output());
 
-    uint16_t add_res = unit.get_result();
-    assert(std::abs(bf16::bf16_to_float(add_res) - 6.0f) < 0.01);
+    PE::Number add_res = unit.get_result();
+    assert(std::abs(bf16::bf16_to_float(add_res.as_uint16()) - 6.0f) < 0.01);
 
     std::cout << "Pipeline addition test passed." << std::endl;
 }

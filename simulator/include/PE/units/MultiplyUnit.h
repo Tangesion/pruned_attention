@@ -3,6 +3,7 @@
 #include "PE/base/ComputeComponent.h"
 #include "PE/base/Pipeline.h"
 #include "PE/base/PipelineInput.h"
+#include "PE/base/DataType.h"
 #include "bf16/multiply_sim.h"
 #include <memory>
 
@@ -10,11 +11,11 @@ namespace PE {
 
 class MultiplyUnit : public ComputeComponent {
 private:
-    PipelinePtr<uint16_t> pipeline;
+    PipelinePtr<Number> pipeline;
     TwoOperandInput current_input;
 
 public:
-    explicit MultiplyUnit(PipelinePtr<uint16_t> p);
+    explicit MultiplyUnit(PipelinePtr<Number> p);
 
     void reset() override;
 
@@ -22,9 +23,9 @@ public:
 
     void clock_cycle() override;
 
-    void load_operands(uint16_t a, uint16_t b, bool valid);
+    void load_operands(Number a, Number b, bool valid);
 
-    uint16_t get_result();
+    Number get_result();
 
     bool has_output() const;
 };

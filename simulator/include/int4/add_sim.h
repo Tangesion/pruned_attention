@@ -2,20 +2,21 @@
 
 #include "PE/base/VirtualPipeline.h"
 #include "PE/base/PipelineInput.h"
-#include "int4/int4_basic_ops.h"
+#include "PE/base/DataType.h"
 #include <cstdint>
 #include <vector>
 
 namespace int4 {
 
-class Int4AddPipeline : public PE::VirtualPipeline<int32_t> {
+class Int4AddPipeline : public PE::VirtualPipeline<PE::Number> {
 public:
     Int4AddPipeline(uint32_t latency = 1)
-        : PE::VirtualPipeline<int32_t>(latency, [](const PE::PipelineInput& input) -> std::vector<int32_t> {
-            const auto* in = dynamic_cast<const PE::TwoOperandInput32*>(&input);
+        : PE::VirtualPipeline<PE::Number>(latency, [](const PE::PipelineInput& input) -> std::vector<PE::Number> {
+            const auto* in = dynamic_cast<const PE::TwoOperandInput*>(&input);
             if (!in || !in->valid) return {};
             
-            return { in->a + in->b };
+            // Assume inputs are Int32 for accumulation
+            return { PE::Number(in->a.as_int32() + in->b.as_int32()) };
         }) {}
 };
 

@@ -36,7 +36,7 @@ bool MacArrayUnit::is_active() const {
     return false;
 }
 
-void MacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>& inputs, const std::vector<bool>& valids, const std::vector<bool>& reset_flags) {
+void MacArrayUnit::load_inputs(const std::vector<std::pair<Number, Number>>& inputs, const std::vector<bool>& valids, const std::vector<bool>& reset_flags) {
     // std::cout << "[DEBUG] MacArrayUnit::load_inputs size=" << inputs.size() << std::endl;
     if (inputs.size() != size || valids.size() != size) {
         std::cerr << "[ERROR] Input size mismatch in MacArrayUnit" << std::endl;
@@ -50,8 +50,8 @@ void MacArrayUnit::load_inputs(const std::vector<std::pair<uint16_t, uint16_t>>&
 
     for (size_t i = 0; i < size; ++i) {
         mac_units[i]->load_inputs(
-            i >= inputs.size() ? 0 : inputs[i].first,
-            i >= inputs.size() ? 0 : inputs[i].second,
+            i >= inputs.size() ? Number() : inputs[i].first,
+            i >= inputs.size() ? Number() : inputs[i].second,
             i >= valids.size() ? false : valids[i],
             (reset_flags.empty() || i >= reset_flags.size()) ? false : reset_flags[i]
         );
@@ -74,7 +74,7 @@ bool MacArrayUnit::has_output(size_t mac_index) const {
     return mac_units[mac_index]->has_final_output();
 }
 
-uint16_t MacArrayUnit::pop_output(size_t mac_index) {
+Number MacArrayUnit::pop_output(size_t mac_index) {
     if (mac_index >= size) {
         std::cerr << "[ERROR] Mac index out of range: " << mac_index << std::endl;
         throw std::out_of_range("Mac index out of range in MacArrayUnit.");

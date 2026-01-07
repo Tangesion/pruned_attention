@@ -8,6 +8,7 @@
 #include <cassert>
 #include <iomanip>
 #include <queue>
+#include <algorithm>
 
 using namespace PE;
 
@@ -73,19 +74,40 @@ void test_stream_add_tree(size_t input_size, size_t batch_count) {
         
         // Feed input if available
         if (batch_idx < batch_count) {
-            add_tree.load_inputs(all_inputs_bf16[batch_idx], true);
+            // Convert to Number vector
+            std::vector<PE::Number> inputs_num;
+            inputs_num.reserve(input_size);
+            for(auto v : all_inputs_bf16[batch_idx]) {
+                inputs_num.push_back(PE::Number(v));
+            }
+            add_tree.load_inputs(inputs_num, true);
             batch_idx++;
         } else {
-            // Feed bubbles (valid=false) or just don't load?
-            // AddTreeUnit logic: if load_inputs not called, input queue empty.
-            // But internal pipeline needs clocking.
-            // Let's try not loading (implicit bubble/stall)
+            // Feed bubbles (implicit, or valid=false if required)
+            // Original code didn't call load_inputs here, assuming AddTreeUnit handles it?
+            // Checking AddTreeUnit.cpp: if is_active(), logic runs.
+            // But clock_cycle clears stage_outputs for next stage.
+            // Inputs to first stage are pushed by load_inputs.
+            // If load_inputs not called, stage_outputs[0] is not populated.
+            // Wait, AddTreeUnit logic pops from stage_outputs[i].
+            // If we don't call load_inputs, stage_outputs[0] is empty.
+            // Then stage 0 adders get 0,0,valid=false?
+            // "if (stage_valids[i] && !stage_outputs[i].empty())"
+            // If not called, stage_valids[0] is stale? No, stage_valids is updated in loop?
+            // "stage_valids[0] = valid" in load_inputs.
+            // If load_inputs NOT called, stage_valids[0] remains what it was?
+            // No, load_inputs sets it. If not called, it retains previous value?
+            // This suggests load_inputs MUST be called every cycle to set valid=false if no input.
+            // Or AddTreeUnit logic needs fix.
+            // Assuming for now we must feed bubbles.
+            std::vector<PE::Number> bubbles(input_size, PE::Number());
+            add_tree.load_inputs(bubbles, false);
         }
 
         add_tree.clock_cycle();
 
         if (add_tree.has_output()) {
-            uint16_t res = add_tree.get_output();
+            uint16_t res = add_tree.get_output().as_uint16();
             received_sums.push_back(bf16::bf16_to_float(res));
             received_count++;
             // std::cout << "Received batch " << received_count << " at cycle " << cycle << std::endl;

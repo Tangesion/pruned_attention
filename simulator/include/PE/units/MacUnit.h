@@ -1,6 +1,7 @@
 #pragma once
 #include "PE/base/ComputeComponent.h"
 #include "PE/base/Pipeline.h"
+#include "PE/base/DataType.h"
 #include "PE/units/AddUnit.h"
 #include "PE/units/MultiplyUnit.h"
 #include <deque>
@@ -10,16 +11,16 @@ namespace PE {
 
 class MacUnit : public ComputeComponent {
 public:
-    MacUnit(PipelinePtr<uint16_t> mult_pipe, PipelinePtr<uint16_t> add_pipe);
+    MacUnit(PipelinePtr<Number> mult_pipe, PipelinePtr<Number> add_pipe);
     void reset() override;
     bool is_active() const override;
     void clock_cycle() override;
 
-    void load_inputs(uint16_t in1, uint16_t in2, bool valid, bool reset_flag=false);
-    void set_initial_acc(uint16_t initial_acc);
+    void load_inputs(Number in1, Number in2, bool valid, bool reset_flag=false);
+    void set_initial_acc(Number initial_acc);
     bool has_final_output() const;
-    uint16_t get_final_output();
-    uint16_t get_accumulated_result() const;
+    Number get_final_output();
+    Number get_accumulated_result() const;
 
     void set_interleave_depth(size_t depth);
 
@@ -27,15 +28,15 @@ private:
     std::unique_ptr<MultiplyUnit> mult_unit;
     std::unique_ptr<AddUnit> add_unit;
 
-    uint16_t input1 = 0;
-    uint16_t input2 = 0;
+    Number input1;
+    Number input2;
     bool input_valid = false;
 
-    std::deque<uint16_t> multiply_queue;
-    std::deque<uint16_t> acc_queue;
+    std::deque<Number> multiply_queue;
+    std::deque<Number> acc_queue;
     std::deque<bool> reset_queue;
 
-    std::deque<uint16_t> outputs;
+    std::deque<Number> outputs;
     
     uint32_t cycle_count = 0;
 

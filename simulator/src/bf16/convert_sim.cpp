@@ -49,7 +49,7 @@ void BF16ConvertPipeline::clock_cycle(const PE::PipelineInput& input) {
                 stage3.bf16_val = stage2.high_bits;
             }
         }
-        outputs.push_back(stage3.bf16_val);
+        outputs.push_back(PE::Number(stage3.bf16_val));
     }
     stage3.is_valid = stage2.is_valid;
 
@@ -69,15 +69,15 @@ void BF16ConvertPipeline::clock_cycle(const PE::PipelineInput& input) {
     stage1.is_valid = new_valid;
 }
 
-const std::deque<uint16_t>& BF16ConvertPipeline::get_outputs() const {
+const std::deque<PE::Number>& BF16ConvertPipeline::get_outputs() const {
     return outputs;
 }
 
-uint16_t BF16ConvertPipeline::pop_output() {
+PE::Number BF16ConvertPipeline::pop_output() {
     if (outputs.empty()) {
         throw std::runtime_error("No outputs available to pop.");
     }
-    uint16_t val = outputs.front();
+    PE::Number val = outputs.front();
     outputs.pop_front();
     return val;
 }

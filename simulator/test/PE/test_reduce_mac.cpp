@@ -53,17 +53,14 @@ void run_gemv_test(
             bool reset_flag = (col > 0) && (k < 4);
             
             auto [v1, v2] = input_gen(col, k);
-            reduce_unit.load_inputs(f2bf(v1), f2bf(v2), true, reset_flag);
+            reduce_unit.load_inputs(PE::Number(f2bf(v1)), PE::Number(f2bf(v2)), true, reset_flag);
             reduce_unit.clock_cycle();
             k++; // Only increment processed data count on valid input
 
             // Check Output
             if (reduce_unit.has_output()) {
-                float res = bf2f(reduce_unit.get_output());
+                float res = bf2f(reduce_unit.get_output().as_uint16());
                 // The output received here is for the PREVIOUS column (col - 1)
-                // because the current column's start triggers the flush.
-                // However, strictly speaking, it's the output of the *just completed accumulation*.
-                // The first output we get corresponds to Col 0.
                 
                 int result_idx = received_count;
                 float expected = expected_gen(result_idx);
@@ -84,18 +81,18 @@ void run_gemv_test(
     // std::cout << "  Final Flush..." << std::endl;
     for (int i = 0; i < ADD_PIPELINE_DEPTH; ++i) {
         total_cycles++;
-        reduce_unit.load_inputs(0, 0, true, true);
+        reduce_unit.load_inputs(PE::Number(), PE::Number(), true, true);
         reduce_unit.clock_cycle();
     }
     
 
     for (int i = 0; reduce_unit.is_active(); ++i) { // Enough cycles to drain
         total_cycles++;
-        reduce_unit.load_inputs(0, 0, false, false);
+        reduce_unit.load_inputs(PE::Number(), PE::Number(), false, false);
         reduce_unit.clock_cycle();
 
         if (reduce_unit.has_output()) {
-             float res = bf2f(reduce_unit.get_output());
+             float res = bf2f(reduce_unit.get_output().as_uint16());
              int result_idx = received_count;
              if (result_idx < num_cols) {
                 float expected = expected_gen(result_idx);
