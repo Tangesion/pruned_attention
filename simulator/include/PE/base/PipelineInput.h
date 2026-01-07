@@ -13,6 +13,13 @@ struct PipelineInput {
 // Input struct for two-operand operations
 struct TwoOperandInput : PipelineInput {
     uint16_t a, b;
+    bool valid = false;
+};
+
+// Input struct for two-operand operations with 32-bit operands
+struct TwoOperandInput32 : PipelineInput {
+    int32_t a, b;
+    bool valid = false;
 };
 
 // Input struct for fp32 conversion operations

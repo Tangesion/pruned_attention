@@ -34,6 +34,9 @@ add_library(bf16_sim STATIC
 add_executable(test_bf16_basic_ops test/bf16/test_bf16_basic_ops.cpp)
 target_link_libraries(test_bf16_basic_ops bf16_sim)
 
+add_executable(test_int4_pipeline test/int4/test_int4_pipeline.cpp)
+target_link_libraries(test_int4_pipeline bf16_sim)
+
 add_executable(test_convert_sim test/bf16/test_convert_sim.cpp)
 target_link_libraries(test_convert_sim bf16_sim)
 
