@@ -28,9 +28,14 @@ add_library(bf16_sim STATIC
     src/PE/units/ReduceMacUnit.cpp
     src/PE/units/ReduceMacArrayUnit.cpp
     src/PE/scheduler/GemvScheduler.cpp
+    src/Memory/HBMController.cpp
+    src/Memory/DDRController.cpp
 )
 
 # Add test executables
+add_executable(experiment_memory_efficiency experiments/experiment_memory_efficiency.cpp)
+target_link_libraries(experiment_memory_efficiency bf16_sim)
+
 add_executable(test_bf16_basic_ops test/bf16/test_bf16_basic_ops.cpp)
 target_link_libraries(test_bf16_basic_ops bf16_sim)
 
