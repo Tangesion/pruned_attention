@@ -399,7 +399,55 @@ class CompressedLlamaAttention(nn.Module):
                     temp_scores[..., local_start:] = -float('inf')
 
                 # 3. 从剩余部分选出 TopK
-                _, topk_indices = torch.topk(temp_scores, k_val, dim=-1) # [B, H, 1, k_val]
+                #_, topk_indices = torch.topk(temp_scores, k_val, dim=-1) # [B, H, 1, k_val]
+                # =============== 新增 Block-Sparse 逻辑 ===============
+                BLOCK_SIZE = 4  # 你可以定义成类的属性 self.block_size
+                
+                # 1. Padding: 如果序列长度不能被 BLOCK_SIZE 整除，需要补齐
+                # temp_scores shape: [B, H, 1, Seq_Len]
+                seq_len = temp_scores.shape[-1]
+                pad_len = (BLOCK_SIZE - (seq_len % BLOCK_SIZE)) % BLOCK_SIZE
+                
+                if pad_len > 0:
+                    # 补 -inf，保证补的这些不会被选中
+                    padding = torch.full((*temp_scores.shape[:-1], pad_len), float('-inf'), device=temp_scores.device, dtype=temp_scores.dtype)
+                    padded_scores = torch.cat([temp_scores, padding], dim=-1)
+                else:
+                    padded_scores = temp_scores
+
+                # 2. Reshape & Max Pooling
+                # [B, H, 1, Num_Blocks, Block_Size]
+                reshaped_scores = padded_scores.view(*padded_scores.shape[:-1], -1, BLOCK_SIZE)
+                
+                # 取每个块的最大值作为该块的分数
+                # block_scores: [B, H, 1, Num_Blocks]
+                block_scores, _ = reshaped_scores.max(dim=-1)
+
+                # 3. Block-level TopK
+                # k_val 是你要选的 Token 总数，所以块的数量 = k_val // BLOCK_SIZE
+                k_blocks = max(1, k_val // BLOCK_SIZE) 
+                _, topk_block_indices = torch.topk(block_scores, k_blocks, dim=-1) # [B, H, 1, k_blocks]
+
+                # 4. Expand: 将块索引还原回 Token 索引
+                # 例如 block_idx=2, BLOCK_SIZE=4 -> indices 8, 9, 10, 11
+                # [B, H, 1, k_blocks, 1] * BLOCK_SIZE -> [..., base_index]
+                base_indices = topk_block_indices.unsqueeze(-1) * BLOCK_SIZE 
+                
+                # [1, 1, 1, 1, BLOCK_SIZE] -> [0, 1, 2, 3]
+                offsets = torch.arange(BLOCK_SIZE, device=base_indices.device).view(1, 1, 1, 1, -1)
+                
+                # Broadcasting add: [B, H, 1, k_blocks, BLOCK_SIZE]
+                full_indices = base_indices + offsets
+                
+                # Flatten back to [B, H, 1, Total_Tokens]
+                topk_indices = full_indices.view(*topk_block_indices.shape[:-1], -1)
+
+                # 5. 边界检查 (非常重要!)
+                # 因为我们可能有 Padding，还原出来的某些索引可能会越界 (>= seq_len)
+                # clamp 一下或者 mask 掉，但在 gather 之前最好确保索引有效。
+                # 由于我们 padding 填的是 -inf，正常情况下选不到越界的块，除非 k_val 很大。
+                # 为了安全，clamp 到最大有效索引
+                topk_indices = topk_indices.clamp(max=seq_len - 1)
 
                 # 4. 拼接索引: Sink + Local + TopK
                 # 需要将 sink/local 索引扩展维度以匹配 batch 和 head
