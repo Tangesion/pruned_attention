@@ -240,4 +240,20 @@ std::vector<int32_t> GemvScheduler::run_gemv_int32(
     return res;
 }
 
+// Int4 Multi Batch
+std::vector<std::vector<int32_t>> GemvScheduler::run_gemv_int32(
+    const std::vector<std::vector<std::vector<uint16_t>>>& matrices, 
+    const std::vector<std::vector<uint16_t>>& inputs
+) {
+    auto res_num = run_gemv_impl_multibatch(matrices, inputs);
+    std::vector<std::vector<int32_t>> res(res_num.size());
+    for(size_t i=0; i<res_num.size(); ++i) {
+        res[i].resize(res_num[i].size());
+        for(size_t j=0; j<res_num[i].size(); ++j) {
+            res[i][j] = res_num[i][j].as_int32();
+        }
+    }
+    return res;
+}
+
 } // namespace PE

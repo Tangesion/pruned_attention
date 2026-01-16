@@ -15,16 +15,7 @@ DDRController::DDRController(Config config) : config(config) {
 DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
     PhysAddr phys;
     
-    // Simplified Mapping Logic
-    // Physical Address breakdown usually: [Row | Bank | Channel | Col] or [Row | Col | Bank | Channel]
-    // The paper focuses on Bank Mapping.
-    
-    // 1. Column Offset (Lower bits)
-    // For simplicity, assume data is cache-line aligned (e.g., 64 bytes)
-    // The 'col' bits are usually the lowest.
-    // However, the paper implies we map "Logical Address" to "Bank".
-    
-    // Let's assume logical address is linear byte address.
+
     
     uint32_t channel_bits = static_cast<uint32_t>(std::log2(config.num_channels));
     uint32_t bank_bits    = static_cast<uint32_t>(std::log2(config.num_banks_per_channel));
@@ -43,8 +34,6 @@ DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
         // Linear: Consecutive blocks go to consecutive banks
         phys.bank = rest_addr & (config.num_banks_per_channel - 1);
         
-        // Row is the rest
-        // We need to account for how many blocks fit in a row.
         // RowSize = 2^row_size_bits.
         // Blocks per row = RowSize / 64.
         uint64_t blocks_per_row = config.row_size_bytes >> block_offset_bits;
@@ -107,11 +96,6 @@ bool DDRController::send_request(const MemoryRequest& req) {
     
     // 5. Update Request and Bank State
     processing_req.ready_cycle = start_cycle + latency;
-    
-    // Ideally, tRC (Row Cycle Time) defines when the bank is ready for a *different* row.
-    // For simplicity, we just say the bank is busy until the data burst is done (plus some recovery).
-    // In a detailed DDR model, we'd track tRAS, tRC, etc. strictly.
-    // Here, we ensure the 'bank' (or at least the data path) is busy.
     state.bank_next_free_cycle = processing_req.ready_cycle;
 
     pending_requests.push_back(processing_req);

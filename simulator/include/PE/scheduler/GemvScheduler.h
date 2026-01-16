@@ -40,6 +40,12 @@ public:
         const std::vector<uint16_t>& input
     );
 
+    // Run multiple batches like mha GEMV task returning int32
+    std::vector<std::vector<int32_t>> run_gemv_int32(
+        const std::vector<std::vector<std::vector<uint16_t>>>& matrices, 
+        const std::vector<std::vector<uint16_t>>& inputs
+    );
+
 private:
     Config config;
     
