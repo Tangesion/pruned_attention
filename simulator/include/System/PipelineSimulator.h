@@ -1,11 +1,22 @@
 #pragma once
+#include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <vector>
 #include <deque>
 #include <cstdint>
 #include <iostream>
 #include <string>
-#include "Memory/HBMController.h"
 #include "Memory/DDRController.h"
+#include "PE/scheduler/GemvScheduler.h"
+#include "PE/units/ReduceMacArrayUnit.h"
+#include "bf16/add_sim.h"
+#include "bf16/multiply_sim.h"
+#include "bf16/bf16_basic_ops.h"
+#include "int4/multiply_sim.h"
+#include "int4/add_sim.h"
+#include "int4/int4_basic_ops.h"
+#include "System/utils.h"
 
 namespace System {
 
@@ -23,13 +34,16 @@ struct HeadGroupTask {
     int group_id;
     int num_heads;
 
-    int seq_len;
-    int selected_kv_len;
+    size_t seq_len;
+    size_t selected_kv_len;
+
+    size_t P_stage_pe_nums;
+    size_t C_stage_pe_nums;
     
     // Timestamps for logging (Gantt Chart)
-    uint64_t p_start = 0, p_end = 0;
-    uint64_t f_start = 0, f_end = 0;
-    uint64_t c_start = 0, c_end = 0;
+    size_t p_start = 0, p_end = 0;
+    size_t f_start = 0, f_end = 0;
+    size_t c_start = 0, c_end = 0;
     
     Stage current_stage = Stage::IDLE;
 };
@@ -41,20 +55,24 @@ struct PipelineConfig {
     size_t max_queue_size = 2; // Finite FIFO depth for backpressure simulation
 
     // Model Params
-    uint64_t context_length;
-    uint64_t head_dim;         // e.g., 128
-    uint64_t bytes_per_elem;   // e.g., 2 for BF16
+    size_t context_length;
+    size_t head_dim;         // e.g., 128
+    size_t bytes_per_elem;   // e.g., 2 for BF16
     double sparsity_ratio;     // alpha
-    uint64_t num_head_groups;
-    uint64_t heads_per_group;
+    size_t num_head_groups;
+    size_t heads_per_group;
+
+    size_t selected_kv_len;
     
     // Hardware Params
     // P-Stage
     double hbm_scan_bandwidth_gbps; 
-    uint64_t int4_vector_size_bytes; // Size of compressed Int4 vector per token per head
+    size_t int4_vector_size_bytes; // Size of compressed Int4 vector per token per head
+    size_t P_stage_pe_nums;
     
     // C-Stage
-    uint64_t num_bf16_pes; // e.g., 64 (Realistic FPGA Resource)
+    size_t num_bf16_pes; // e.g., 64 (Realistic FPGA Resource)
+    size_t C_stage_pe_nums;
     
     // F-Stage (Latency comes from DDRController)
     // We assume S_blk (512B) aggregation happens in hardware
@@ -70,15 +88,18 @@ public:
     // Get the trace logs for visualization
     const std::vector<HeadGroupTask>& get_task_logs() const;
     
-    uint64_t get_total_cycles() const { return current_cycle; }
-    uint64_t get_total_bubbles() const { return total_bubbles; }
+    size_t get_total_cycles() const { return current_cycle; }
+    size_t get_total_bubbles() const { return total_bubbles; }
 
 private:
     PipelineConfig config;
     Memory::DDRController& ddr;
+
+    std::unique_ptr<PE::GemvScheduler> predict_gemv_scheduler;
+    std::unique_ptr<PE::GemvScheduler> compute_gemv_scheduler;
     
-    uint64_t current_cycle = 0;
-    uint64_t total_bubbles = 0;
+    size_t current_cycle = 0;
+    size_t total_bubbles = 0;
     
     // All tasks to process
     std::vector<HeadGroupTask> tasks;
@@ -94,18 +115,21 @@ private:
     int busy_f_stage_task = -1;
     int busy_c_stage_task = -1;
     
-    uint64_t p_stage_free_cycle = 0;
-    uint64_t f_stage_free_cycle = 0;
-    uint64_t c_stage_free_cycle = 0;
+    size_t p_stage_free_cycle = 0;
+    size_t f_stage_free_cycle = 0;
+    size_t c_stage_free_cycle = 0;
 
     // Scaling factors for F-Stage extrapolation
-    uint64_t f_num_reqs = 0;
-    uint64_t f_sim_count = 0;
+    size_t f_num_reqs = 0;
+    size_t f_sim_count = 0;
 
     // Helper functions
-    uint64_t calculate_p_latency(const HeadGroupTask& task);
-    uint64_t calculate_c_latency(const HeadGroupTask& task);
+    size_t calculate_p_latency(const HeadGroupTask& task);
+    size_t calculate_c_latency(const HeadGroupTask& task);
     // F-Latency is calculated dynamically via DDRController
+
+    size_t calculate_p_latency_realistic(const HeadGroupTask& task);
+    size_t calculate_c_latency_realistic(const HeadGroupTask& task);
     
     void step();
 };

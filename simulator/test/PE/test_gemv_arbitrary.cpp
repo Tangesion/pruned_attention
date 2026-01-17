@@ -42,7 +42,7 @@ PerfStats run_bf16_sim(size_t K, size_t N, size_t num_pes,
     auto add_pipe_factory = []() { return std::make_unique<bf16::BF16AddPipeline>(); };
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
-    GemvScheduler::Config config{1000.0, num_pes}; // Unlimited bandwidth
+    GemvScheduler::Config config{ num_pes}; // Unlimited bandwidth
     GemvScheduler scheduler(std::move(mac_array), config);
 
     scheduler.run_gemv(matrix, input);
@@ -65,7 +65,7 @@ PerfStats run_int4_sim(size_t K, size_t N, size_t num_pes,
     auto add_pipe_factory = []() { return std::make_unique<int4::Int4AddPipeline>(); };
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
-    GemvScheduler::Config config{1000.0, num_pes};
+    GemvScheduler::Config config{ num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);
 
     scheduler.run_gemv_int32(matrix, input);

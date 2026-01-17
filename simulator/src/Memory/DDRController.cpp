@@ -12,7 +12,7 @@ DDRController::DDRController(Config config) : config(config) {
     }
 }
 
-DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
+DDRController::PhysAddr DDRController::map_address(size_t address) const {
     PhysAddr phys;
     
 
@@ -24,11 +24,11 @@ DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
     // Basic Interleaving Granularity (e.g., 64 bytes)
     uint32_t block_offset_bits = 6; // 64 bytes
     
-    uint64_t block_addr = address >> block_offset_bits;
+    size_t block_addr = address >> block_offset_bits;
     
     // Channel is usually the lowest interleaving
     phys.channel = block_addr & (config.num_channels - 1);
-    uint64_t rest_addr = block_addr >> channel_bits;
+    size_t rest_addr = block_addr >> channel_bits;
 
     if (config.mapping_strategy == BankMappingStrategy::LINEAR) {
         // Linear: Consecutive blocks go to consecutive banks
@@ -36,7 +36,7 @@ DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
         
         // RowSize = 2^row_size_bits.
         // Blocks per row = RowSize / 64.
-        uint64_t blocks_per_row = config.row_size_bytes >> block_offset_bits;
+        size_t blocks_per_row = config.row_size_bytes >> block_offset_bits;
         phys.row = rest_addr / (config.num_banks_per_channel * blocks_per_row);
         
     } else {
@@ -50,7 +50,7 @@ DDRController::PhysAddr DDRController::map_address(uint64_t address) const {
         phys.bank = lower ^ higher;
         
         // Simplified Row calculation for simulation
-        uint64_t blocks_per_row = config.row_size_bytes >> block_offset_bits;
+        size_t blocks_per_row = config.row_size_bytes >> block_offset_bits;
         phys.row = rest_addr / (config.num_banks_per_channel * blocks_per_row);
     }
     
@@ -74,8 +74,8 @@ bool DDRController::send_request(const MemoryRequest& req) {
     // 3. Determine Start Cycle
     // The bank can start processing this command only after it's free from previous commands
     // AND after the request has arrived.
-    uint64_t start_cycle = std::max(req.arrival_cycle, state.bank_next_free_cycle);
-    uint64_t latency = 0;
+    size_t start_cycle = std::max(req.arrival_cycle, state.bank_next_free_cycle);
+    size_t latency = 0;
     
     // 4. Calculate Latency based on Row State
     if (state.open_row_id == -1) {
@@ -102,7 +102,7 @@ bool DDRController::send_request(const MemoryRequest& req) {
     return true;
 }
 
-void DDRController::step(uint64_t current_cycle) {
+void DDRController::step(size_t current_cycle) {
     completed_buffer.clear();
     
     auto it = pending_requests.begin();

@@ -31,7 +31,7 @@ void test_single_batch_gemv() {
     
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
-    GemvScheduler::Config config{bandwidth, num_pes};
+    GemvScheduler::Config config{num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);
 
     // 2. Prepare Data

@@ -12,15 +12,15 @@ enum class RequestType {
 
 // A single memory request
 struct MemoryRequest {
-    uint64_t req_id;        // Unique ID for tracking
-    uint64_t address;       // Logical Byte Address
+    size_t req_id;        // Unique ID for tracking
+    size_t address;       // Logical Byte Address
     size_t size_bytes;      // Size of request
     RequestType type;
     
-    uint64_t arrival_cycle; // When the request was sent to controller
-    uint64_t ready_cycle;   // When the data is available (calculated by controller)
+    size_t arrival_cycle; // When the request was sent to controller
+    size_t ready_cycle;   // When the data is available (calculated by controller)
 
-    MemoryRequest(uint64_t id, uint64_t addr, size_t size, RequestType t, uint64_t arrival)
+    MemoryRequest(size_t id, size_t addr, size_t size, RequestType t, size_t arrival)
         : req_id(id), address(addr), size_bytes(size), type(t), 
           arrival_cycle(arrival), ready_cycle(0) {}
 };

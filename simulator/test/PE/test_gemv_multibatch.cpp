@@ -111,7 +111,7 @@ void run_test_multibatch_bf16(size_t B, size_t K, size_t N, size_t num_pes, bool
     auto add_pipe_factory = []() { return std::make_unique<bf16::BF16AddPipeline>(); };
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
-    GemvScheduler::Config config{32.0, num_pes};
+    GemvScheduler::Config config{ num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);
 
     // 3. Run Simulation
@@ -203,7 +203,7 @@ void run_test_multibatch_int4(size_t B, size_t K, size_t N, size_t num_pes, bool
     auto add_pipe_factory = []() { return std::make_unique<int4::Int4AddPipeline>(1); };
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_pipe_factory, add_pipe_factory, num_pes);
 
-    GemvScheduler::Config config{32.0, num_pes};
+    GemvScheduler::Config config{num_pes};
     GemvScheduler scheduler(std::move(mac_array), config);
 
     // 3. Run Simulation

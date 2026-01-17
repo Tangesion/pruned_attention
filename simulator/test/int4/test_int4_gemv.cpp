@@ -17,7 +17,6 @@ void test_int4_gemv_basic() {
     auto mac_array = std::make_unique<ReduceMacArrayUnit>(mult_factory, add_factory, 4);
     GemvScheduler::Config config;
     config.num_pes = 4;
-    config.bandwidth_words_per_cycle = 100; // unlimited
     
     GemvScheduler scheduler(std::move(mac_array), config);
 

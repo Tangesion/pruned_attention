@@ -36,7 +36,7 @@ struct Number {
     explicit Number(uint16_t v) : type{TypeCode::UInt16, 16} { value.u16 = v; }
     explicit Number(int32_t v) : type{TypeCode::Int32, 32} { value.i32 = v; }
     explicit Number(float v) : type{TypeCode::Float, 32} { value.f32 = v; }
-    Number(DataType t, uint64_t raw_val) : type(t) {
+    Number(DataType t, size_t raw_val) : type(t) {
         if (t.code == TypeCode::UInt16) value.u16 = (uint16_t)raw_val;
         else if (t.code == TypeCode::Int32) value.i32 = (int32_t)raw_val;
         else if (t.code == TypeCode::Float) value.f32 = (float)raw_val; // casting uint to float might be wrong if raw_val is bits

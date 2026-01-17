@@ -15,7 +15,7 @@ public:
     HBMController(Config config);
 
     bool send_request(const MemoryRequest& req) override;
-    void step(uint64_t current_cycle) override;
+    void step(size_t current_cycle) override;
     std::vector<MemoryRequest> pop_completed_requests() override;
     bool is_idle() const override;
 
@@ -24,7 +24,7 @@ private:
     double bytes_per_cycle;
     
     // Time when the HBM data bus will be free
-    uint64_t bus_next_free_cycle = 0;
+    size_t bus_next_free_cycle = 0;
 
     // Requests being processed
     std::deque<MemoryRequest> pending_requests;

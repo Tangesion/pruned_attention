@@ -13,10 +13,10 @@ using namespace Memory;
 // =================================================================================
 // Configuration Constants
 // =================================================================================
-const uint64_t TOTAL_TOKENS = 128 * 1024; // 128K Context Window
-const uint64_t HIDDEN_SIZE = 128;         // 128 channels (Head Dimension)
-const uint64_t BYTES_PER_ELEMENT = 2;     // BF16
-const uint64_t TOKEN_SIZE_BYTES = HIDDEN_SIZE * BYTES_PER_ELEMENT; // 256 Bytes per token
+const size_t TOTAL_TOKENS = 128 * 1024; // 128K Context Window
+const size_t HIDDEN_SIZE = 128;         // 128 channels (Head Dimension)
+const size_t BYTES_PER_ELEMENT = 2;     // BF16
+const size_t TOKEN_SIZE_BYTES = HIDDEN_SIZE * BYTES_PER_ELEMENT; // 256 Bytes per token
 
 // DDR4-3200ish Configuration
 const DDRController::Config DDR_CONFIG = {
@@ -33,15 +33,15 @@ const DDRController::Config DDR_CONFIG = {
 // =================================================================================
 // Helper: Workload Generation
 // =================================================================================
-std::vector<uint64_t> generate_indices(double sparsity, uint64_t total_tokens) {
-    uint64_t num_selected = static_cast<uint64_t>(total_tokens * sparsity);
-    std::vector<uint64_t> indices;
+std::vector<size_t> generate_indices(double sparsity, size_t total_tokens) {
+    size_t num_selected = static_cast<size_t>(total_tokens * sparsity);
+    std::vector<size_t> indices;
     indices.reserve(num_selected);
 
     // Use a set to ensure uniqueness, then convert to vector
-    std::unordered_set<uint64_t> distinct_indices;
+    std::unordered_set<size_t> distinct_indices;
     std::mt19937 gen(42); // Fixed seed for reproducibility
-    std::uniform_int_distribution<uint64_t> dist(0, total_tokens - 1);
+    std::uniform_int_distribution<size_t> dist(0, total_tokens - 1);
 
     while (distinct_indices.size() < num_selected) {
         distinct_indices.insert(dist(gen));
@@ -54,13 +54,13 @@ std::vector<uint64_t> generate_indices(double sparsity, uint64_t total_tokens) {
 // =================================================================================
 // SGU Logic (Sparse Gather Unit)
 // =================================================================================
-std::vector<MemoryRequest> sgu_naive(const std::vector<uint64_t>& token_indices) {
+std::vector<MemoryRequest> sgu_naive(const std::vector<size_t>& token_indices) {
     // Naive: Just send requests as they come (random order), no merging
     std::vector<MemoryRequest> reqs;
     reqs.reserve(token_indices.size());
-    uint64_t id_counter = 0;
+    size_t id_counter = 0;
 
-    for (uint64_t idx : token_indices) {
+    for (size_t idx : token_indices) {
         reqs.emplace_back(
             id_counter++, 
             idx * TOKEN_SIZE_BYTES, // Address
@@ -72,7 +72,7 @@ std::vector<MemoryRequest> sgu_naive(const std::vector<uint64_t>& token_indices)
     return reqs;
 }
 
-std::vector<MemoryRequest> sgu_optimized(std::vector<uint64_t> token_indices) {
+std::vector<MemoryRequest> sgu_optimized(std::vector<size_t> token_indices) {
     // Ours: 
     // 1. Sort indices (Simulating Reorder Buffer / ROB)
     // 2. Merge adjacent requests (Simulating Request Merging)
@@ -80,12 +80,12 @@ std::vector<MemoryRequest> sgu_optimized(std::vector<uint64_t> token_indices) {
     std::sort(token_indices.begin(), token_indices.end());
 
     std::vector<MemoryRequest> reqs;
-    uint64_t id_counter = 0;
+    size_t id_counter = 0;
 
     if (token_indices.empty()) return reqs;
 
-    uint64_t current_start_idx = token_indices[0];
-    uint64_t current_count = 1;
+    size_t current_start_idx = token_indices[0];
+    size_t current_count = 1;
 
     for (size_t i = 1; i < token_indices.size(); ++i) {
         if (token_indices[i] == current_start_idx + current_count) {
@@ -121,17 +121,17 @@ std::vector<MemoryRequest> sgu_optimized(std::vector<uint64_t> token_indices) {
 // Simulation Engine
 // =================================================================================
 struct SimResult {
-    uint64_t total_cycles;
+    size_t total_cycles;
     double effective_bandwidth_gbps;
-    uint64_t total_bytes_transferred;
+    size_t total_bytes_transferred;
 };
 
 SimResult run_simulation(DDRController& ddr, std::vector<MemoryRequest>& workload) {
-    uint64_t current_cycle = 0;
+    size_t current_cycle = 0;
     size_t req_idx = 0;
-    uint64_t completed_count = 0;
+    size_t completed_count = 0;
     size_t total_reqs = workload.size();
-    uint64_t total_bytes = 0;
+    size_t total_bytes = 0;
 
     // To simulate finite MSHR / Request Buffer, we limit in-flight requests
     // Let's say SGU can hold 64 pending requests

@@ -27,7 +27,7 @@ public:
     DDRController(Config config);
 
     bool send_request(const MemoryRequest& req) override;
-    void step(uint64_t current_cycle) override;
+    void step(size_t current_cycle) override;
     std::vector<MemoryRequest> pop_completed_requests() override;
     bool is_idle() const override;
 
@@ -36,7 +36,7 @@ private:
 
     struct BankState {
         int64_t open_row_id = -1;       // -1 indicates closed
-        uint64_t bank_next_free_cycle = 0; // When can this bank accept a new command
+        size_t bank_next_free_cycle = 0; // When can this bank accept a new command
     };
 
     // Organized as [Channel][Bank]
@@ -50,10 +50,10 @@ private:
     struct PhysAddr {
         uint32_t channel;
         uint32_t bank;
-        uint64_t row;
-        uint64_t col;
+        size_t row;
+        size_t col;
     };
-    PhysAddr map_address(uint64_t address) const;
+    PhysAddr map_address(size_t address) const;
 };
 
 } // namespace Memory

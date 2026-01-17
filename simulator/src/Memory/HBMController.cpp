@@ -18,11 +18,11 @@ bool HBMController::send_request(const MemoryRequest& req) {
     MemoryRequest processing_req = req;
     
     // 1. Serialization Latency (Burst Time)
-    uint64_t burst_cycles = static_cast<uint64_t>(std::ceil(req.size_bytes / bytes_per_cycle));
+    size_t burst_cycles = static_cast<size_t>(std::ceil(req.size_bytes / bytes_per_cycle));
     
     // 2. Schedule the bus usage
     // The request can start only when the bus is free AND after it arrives
-    uint64_t start_cycle = std::max(req.arrival_cycle, bus_next_free_cycle);
+    size_t start_cycle = std::max(req.arrival_cycle, bus_next_free_cycle);
     
     // 3. Calculate Finish Time
     // Finish = Start + Fixed_Pipeline_Latency + Burst_Time
@@ -39,7 +39,7 @@ bool HBMController::send_request(const MemoryRequest& req) {
     return true;
 }
 
-void HBMController::step(uint64_t current_cycle) {
+void HBMController::step(size_t current_cycle) {
     completed_buffer.clear();
     
     auto it = pending_requests.begin();

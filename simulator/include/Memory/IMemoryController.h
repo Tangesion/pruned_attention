@@ -15,7 +15,7 @@ public:
     virtual bool send_request(const MemoryRequest& req) = 0;
 
     // Advance simulation by one cycle
-    virtual void step(uint64_t current_cycle) = 0;
+    virtual void step(size_t current_cycle) = 0;
 
     // Get requests that completed in the *current* cycle
     // The user should call this after step()

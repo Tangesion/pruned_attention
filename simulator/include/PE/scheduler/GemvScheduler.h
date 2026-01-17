@@ -10,7 +10,6 @@ namespace PE {
 class GemvScheduler : public ComputeScheduler {
 public:
     struct Config {
-        double bandwidth_words_per_cycle; // Bandwidth configuration
         size_t num_pes;                   // Number of PEs in the MacArrayUnit
     };
 
