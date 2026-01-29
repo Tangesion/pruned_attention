@@ -93,7 +93,7 @@ def get_compression_indices(
     return keep_indices
 
 
-def apply_compression_to_model(model, indices_path="indices.json", quant_mode=None):
+def apply_compression_to_model(model, indices_path="indices.json", quant_mode=None, topk_ratio=0.1, sink_size=4, local_window=64):
     """
     Replaces the standard LlamaAttention layers in a model with CompressedLlamaAttention
     layers, configured with pre-calculated indices.
@@ -111,6 +111,9 @@ def apply_compression_to_model(model, indices_path="indices.json", quant_mode=No
         indices_data = json.load(f)
         
     config = model.config
+    config.topk_ratio = topk_ratio
+    config.sink_size = sink_size
+    config.local_window = local_window
     
     for i, layer in enumerate(tqdm(model.model.layers, desc="Replacing Attention Layers")):
         layer_idx_str = str(i)

@@ -36,11 +36,14 @@ class LlamaAttention_heavy_hitter(nn.Module):
         
         # --- New Configurations ---
         self.escaped_layers = [0, 1, 30, 31]
-        self.sink_size = 4 # Number of sink tokens to always keep
-        self.local_window = 64 # Fixed size local window (recent tokens)
+        #self.sink_size = 4 # Number of sink tokens to always keep
+        #self.local_window = 64 # Fixed size local window (recent tokens)
         
         # heavy_ratio is still a ratio for Heavy Hitters
         self.heavy_budget_ratio = getattr(config, "heavy_ratio", 0.1) 
+        self.sink_size = getattr(config, "sink_size", 4)
+        self.local_window = getattr(config, "local_window", 64)
+        
         
         self.attention_masks_next = None 
         self.heavy_budget = None

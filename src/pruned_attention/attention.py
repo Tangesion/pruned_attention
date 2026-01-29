@@ -161,12 +161,15 @@ class CompressedLlamaAttention(nn.Module):
         self.register_buffer("keep_indices", group_keep_indices)
         self.compressed_dim = group_keep_indices.shape[1]
         self.scaling = self.head_dim**-0.5
-        self.topk_ratio = 0.1
+        #self.topk_ratio = 0.05
+        self.topk_ratio = config.topk_ratio
         self.layer_idx = original_layer.layer_idx
         self.escaped_layer = [0, 1, 30, 31]
         self.attention_dropout = original_layer.attention_dropout
-        self.sink_size = 4
-        self.local_window = 64
+        self.sink_size = config.sink_size
+        self.local_window = config.local_window
+        #self.sink_size = 4
+        #self.local_window = 64
         
         if mode is not None:
             self.quant = PseudoQuantizer(bits=4, mode=mode)
@@ -357,24 +360,37 @@ class CompressedLlamaAttention(nn.Module):
                     mask[..., :self.sink_size] = True
                 
                 # --- Local Window Logic ---
+                #if self.local_window > 0:
+                #    ones = torch.ones_like(mask, dtype=torch.bool)
+                #    loc_start = torch.triu(ones, diagonal=-self.local_window)
+                #    loc_end = torch.tril(ones, diagonal=0)
+                #    
+                #    local_mask = loc_start & loc_end
+                #    mask = mask | local_mask
                 if self.local_window > 0:
-                    # 创建基础全 1 矩阵
-                    ones = torch.ones_like(mask, dtype=torch.bool)
-                    
-                    # 条件 A: k >= q - local_window (下限：不看太旧的)
-                    # 使用 triu(diagonal=-window)
-                    loc_start = torch.triu(ones, diagonal=-self.local_window)
-                    
-                    # 条件 B: k <= q (上限：不看未来的 - 严格因果限制)
-                    # 使用 tril(diagonal=0)
-                    # 解释：虽然 attention_mask 可能已经处理了未来，但显式限制 local_mask 范围更安全
-                    loc_end = torch.tril(ones, diagonal=0)
-                    
-                    # 取交集：既要在窗口开始之后，又要在当前位置之前
-                    local_mask = loc_start & loc_end
-                    
-                    # 【合并】：将 Local Window 并入总 mask (取并集：满足 TopK 或 Sink 或 Local 均保留)
-                    mask = mask | local_mask
+                    kv_seq_len = real_scores.size(-1)
+                    q_len = real_scores.size(-2)
+
+                    # For typical decoding/training with cache: KV = past + Q
+                    past_len = kv_seq_len - q_len
+                    if past_len < 0:
+                        past_len = 0  # safety
+
+                    # q_pos: [Q], absolute positions of the queries in the KV timeline
+                    q_pos = torch.arange(q_len, device=real_scores.device) + past_len  # [Q]
+                    # k_pos: [KV], absolute positions of keys
+                    k_pos = torch.arange(kv_seq_len, device=real_scores.device)  # [KV]
+
+                    # Broadcast to [Q, KV]
+                    # causal: k_pos <= q_pos
+                    # local:  k_pos >= q_pos - (local_window - 1)
+                    q_pos_ = q_pos.view(q_len, 1)
+                    k_pos_ = k_pos.view(1, kv_seq_len)
+
+                    local_mask_2d = (k_pos_ <= q_pos_) & (k_pos_ >= (q_pos_ - (self.local_window - 1)))
+
+                    # Expand to [B, H, Q, KV] and OR into existing mask
+                    mask = mask | local_mask_2d.view(1, 1, q_len, kv_seq_len)
                 
                 min_dtype = torch.finfo(real_scores.dtype).min
                 real_scores = torch.where(mask, real_scores, torch.tensor(min_dtype, dtype=real_scores.dtype))
@@ -399,7 +415,8 @@ class CompressedLlamaAttention(nn.Module):
                     temp_scores[..., local_start:] = -float('inf')
 
                 # 3. 从剩余部分选出 TopK
-                #_, topk_indices = torch.topk(temp_scores, k_val, dim=-1) # [B, H, 1, k_val]
+                _, topk_indices = torch.topk(temp_scores, k_val, dim=-1) # [B, H, 1, k_val]
+                """
                 # =============== 新增 Block-Sparse 逻辑 ===============
                 BLOCK_SIZE = 4  # 你可以定义成类的属性 self.block_size
                 
@@ -448,7 +465,7 @@ class CompressedLlamaAttention(nn.Module):
                 # 由于我们 padding 填的是 -inf，正常情况下选不到越界的块，除非 k_val 很大。
                 # 为了安全，clamp 到最大有效索引
                 topk_indices = topk_indices.clamp(max=seq_len - 1)
-
+                """
                 # 4. 拼接索引: Sink + Local + TopK
                 # 需要将 sink/local 索引扩展维度以匹配 batch 和 head
                 # topk_indices shape: [B, H, 1, k_val]
