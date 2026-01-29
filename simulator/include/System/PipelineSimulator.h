@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include "Memory/DDRController.h"
+#include "Memory/HBMController.h"
 #include "PE/scheduler/GemvScheduler.h"
 #include "PE/units/ReduceMacArrayUnit.h"
 #include "bf16/add_sim.h"
@@ -66,10 +67,15 @@ struct PipelineConfig {
     
     // Hardware Params
     // P-Stage
-    double hbm_scan_bandwidth_gbps; 
+    double hbm_scan_bandwidth_gbps;
     size_t int4_vector_size_bytes; // Size of compressed Int4 vector per token per head
     size_t P_stage_pe_nums;
-    
+
+    // TFU & URAM (Filtering)
+    double uram_bandwidth_gbps;     // e.g., 600.0 (High Bandwidth on-chip)
+    size_t uram_latency_cycles;     // Fixed access latency
+    size_t tfu_throughput_per_cycle; // How many tokens can be filtered per cycle
+
     // C-Stage
     size_t num_bf16_pes; // e.g., 64 (Realistic FPGA Resource)
     size_t C_stage_pe_nums;
@@ -87,13 +93,14 @@ public:
 
     // Get the trace logs for visualization
     const std::vector<HeadGroupTask>& get_task_logs() const;
-    
+
     size_t get_total_cycles() const { return current_cycle; }
     size_t get_total_bubbles() const { return total_bubbles; }
 
 private:
     PipelineConfig config;
     Memory::DDRController& ddr;
+    Memory::HBMController hbm; // HBM Controller for P-Stage
 
     std::unique_ptr<PE::GemvScheduler> predict_gemv_scheduler;
     std::unique_ptr<PE::GemvScheduler> compute_gemv_scheduler;

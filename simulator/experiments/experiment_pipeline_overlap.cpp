@@ -39,9 +39,14 @@ void run_experiment(int num_channels, const std::string& label) {
     pipe_cfg.int4_vector_size_bytes = 64;
     pipe_cfg.num_bf16_pes = 512; 
     pipe_cfg.P_stage_pe_nums = 2048;
-    pipe_cfg.C_stage_pe_nums = 512;
+    pipe_cfg.C_stage_pe_nums = 256;
     pipe_cfg.max_queue_size = 8;
-    
+
+    // TFU & URAM Config
+    pipe_cfg.uram_bandwidth_gbps = 1000.0; // URAM is on-chip, very fast
+    pipe_cfg.uram_latency_cycles = 5;
+    pipe_cfg.tfu_throughput_per_cycle = 64; // Can filter 64 tokens per cycle
+
     // 3. Run
     PipelineSimulator sim(pipe_cfg, ddr);
 

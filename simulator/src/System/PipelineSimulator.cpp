@@ -10,8 +10,13 @@
 namespace System {
 
 PipelineSimulator::PipelineSimulator(PipelineConfig config, Memory::DDRController& ddr_controller)
-    : config(config), ddr(ddr_controller) {
-    
+    : config(config), ddr(ddr_controller),
+      hbm(Memory::HBMController::Config{
+          config.hbm_scan_bandwidth_gbps,
+          config.frequency_mhz / 1000.0,
+          20 // Fixed HBM pipeline latency
+      }) {
+
     // Initialize tasks
     for (int i = 0; i < config.num_head_groups; ++i) {
         HeadGroupTask task;
@@ -34,7 +39,7 @@ PipelineSimulator::PipelineSimulator(PipelineConfig config, Memory::DDRControlle
 
     auto compute_mult_pipe_factory = []() { return std::make_unique<bf16::BF16MultiplyPipeline>(); };
     auto compute_add_pipe_factory = []() { return std::make_unique<bf16::BF16AddPipeline>(); };
-    auto compute_mac_array = std::make_unique<PE::ReduceMacArrayUnit>(compute_mult_pipe_factory, compute_add_pipe_factory, config.num_bf16_pes);
+    auto compute_mac_array = std::make_unique<PE::ReduceMacArrayUnit>(compute_mult_pipe_factory, compute_add_pipe_factory, config.C_stage_pe_nums);
     PE::GemvScheduler::Config compute_config{ config.C_stage_pe_nums };
     compute_gemv_scheduler = std::make_unique<PE::GemvScheduler>(std::move(compute_mac_array), compute_config);
 
@@ -82,19 +87,87 @@ size_t PipelineSimulator::calculate_c_latency(const HeadGroupTask& task) {
 }
 
 size_t PipelineSimulator::calculate_p_latency_realistic(const HeadGroupTask& task) {
-    // score = q * k
+    // 1. Compute Latency (GEMV: Score = Q * K)
     size_t num_heads = task.num_heads;
     size_t seq_len = task.seq_len;
     size_t head_dim = config.head_dim;
 
+    // Use the cycle-accurate scheduler for Compute
     std::vector<std::vector<uint16_t>> q(num_heads);
     std::vector<std::vector<std::vector<uint16_t>>> k(num_heads);
-
     System::generate_random_int4_qk(num_heads, seq_len, head_dim, q, k);
 
-    auto result = predict_gemv_scheduler->run_gemv_int32(k, q);
-    return predict_gemv_scheduler->get_total_cycles();
+    predict_gemv_scheduler->run_gemv_int32(k, q);
+    size_t compute_cycles = predict_gemv_scheduler->get_total_cycles();
 
+    // 2. Memory Latency (HBM Scan)
+    // Total Data = Seq_Len * Num_Heads * Int4_Vector_Size
+    size_t total_scan_bytes = seq_len * num_heads * config.int4_vector_size_bytes;
+
+    // Create a dummy request to calculate latency using HBMController logic
+    // We assume a single large burst or stream of requests.
+    // Since HBMController is stateful, we can either use it directly or replicate the math.
+    // Here we replicate the math from HBMController::send_request for a single large burst
+    // because we want the "ideal" latency for this group in isolation.
+    // bytes_per_cycle = GBps / GHz
+    double bytes_per_cycle = config.hbm_scan_bandwidth_gbps / (config.frequency_mhz / 1000.0);
+    size_t hbm_cycles = static_cast<size_t>(std::ceil(total_scan_bytes / bytes_per_cycle));
+    // Note: HBM Latency overhead (approx 20 cycles) is now handled in the final 'pipeline_overhead'
+
+    // 3. TFU (Top-K Filtering Unit) & URAM
+    // TFU filters tokens based on dynamic threshold
+    // It processes 'tfu_throughput_per_cycle' tokens per cycle.
+    size_t tfu_cycles = seq_len / config.tfu_throughput_per_cycle;
+
+    // URAM Write: Write selected candidates (indices + scores)
+    // Number of candidates = seq_len * sparsity_ratio
+    // We assume URAM bandwidth is dedicated.
+    size_t num_candidates = static_cast<size_t>(seq_len * config.sparsity_ratio);
+    // Each candidate: Index (4B) + Score (4B) = 8 Bytes? Or just Index? Assuming 8B for now.
+    size_t candidate_bytes = num_candidates * 8;
+
+    double uram_bytes_per_cycle = config.uram_bandwidth_gbps / (config.frequency_mhz / 1000.0);
+    size_t uram_write_cycles = static_cast<size_t>(std::ceil(candidate_bytes / uram_bytes_per_cycle));
+    // Note: URAM Latency overhead is now handled in 'pipeline_overhead'
+
+    // Final P-Stage Latency Model:
+    // The HBM Scan and GEMV Compute are pipelined (Streaming).
+    // The TFU is also pipelined with Compute.
+    // URAM Write happens at the end (or pipelined).
+
+    // --- Streaming Pipeline Logic (Cut-Through) ---
+    // In a fully streaming architecture, the total latency is determined by the slowest stage (Bottleneck),
+    // plus the pipeline fill/drain overhead. We do NOT add URAM write time sequentially.
+
+    // Bottleneck 1: HBM Scan (Bandwidth)
+    // Bottleneck 2: Compute (ALU Throughput)
+    // Bottleneck 3: TFU Filtering (Logic Throughput)
+    // Bottleneck 4: URAM Write (Bandwidth)
+
+    // Note: 'compute_cycles' from scheduler is likely "Last Output Time", which effectively includes
+    // both throughput (Volume / Rate) and some pipeline depth.
+    // For purity, we treat it as the compute bottleneck duration.
+
+    // 1. Identify the Bottleneck Stage
+    size_t bottleneck_cycles = std::max({hbm_cycles, compute_cycles, tfu_cycles, uram_write_cycles});
+
+    // 2. Add Pipeline Overhead (Fill/Drain time)
+    // This accounts for the latency of the very first token traveling through the pipeline
+    // and the very last token finishing.
+    // Components: HBM Latency (~20) + GEMV Depth (~50) + TFU Depth (~5) + URAM Latency (~5)
+    size_t pipeline_overhead = 100;
+
+    size_t total_cycles = bottleneck_cycles + pipeline_overhead;
+
+    std::cout << "[P-Stage Detailed Breakdown]\n"
+              << "  - HBM Scan Bytes: " << total_scan_bytes << " -> " << hbm_cycles << " cycles (BW Limit)\n"
+              << "  - Int4 GEMV Compute: " << compute_cycles << " cycles (ALU Limit)\n"
+              << "  - TFU Filtering: " << tfu_cycles << " cycles (Logic Limit)\n"
+              << "  - URAM Write (" << num_candidates << " cands): " << uram_write_cycles << " cycles (BW Limit)\n"
+              << "  => Bottleneck: " << bottleneck_cycles << " cycles\n"
+              << "  => Total Latency: " << total_cycles << " cycles (Streaming)\n";
+
+    return total_cycles;
 }
 
 size_t PipelineSimulator::calculate_c_latency_realistic(const HeadGroupTask& task) {
