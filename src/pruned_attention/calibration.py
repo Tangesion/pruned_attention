@@ -3,6 +3,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import json
 import random
+import os
 from datasets import load_dataset
 from transformers import LlamaForCausalLM
 from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
@@ -136,7 +137,7 @@ def apply_compression_to_model(model, indices_path="indices.json", quant_mode=No
     return model
 
 
-def run_calibration_and_save_indices(model: LlamaForCausalLM, calibration_data: torch.Tensor, device: torch.device, save_path="indices.json"):
+def run_calibration_and_save_indices(model: LlamaForCausalLM, calibration_data: torch.Tensor, device: torch.device, save_path="indices.json", model_name="llama3"):
     """
     Runs the calibration process and saves the calculated dimension indices to a file.
     
@@ -218,20 +219,30 @@ of
 
     model.config.use_cache = use_cache
     
+    base_dirname = "data"
+    os.mkdir(os.path.dirname(base_dirname), exist_ok=True)
+    model_dirname = os.path.join(base_dirname, model_name)
+    os.mkdir(model_dirname, exist_ok=True)
+    save_path = os.path.join(model_dirname, save_path)
     with open(save_path, "w") as f:
         json.dump(indices_dict, f, indent=4)
     print(f"All indices saved to {save_path}")
     
 
-def get_c4_simple(tokenizer, n_samples: int, seq_len: int):
+def get_c4_simple(tokenizer, n_samples: int, seq_len: int, use_modelscope: bool = False):
     """
     Downloads and prepares a small subset of the C4 dataset for calibration.
     """
-    ds_dict = load_dataset("allenai/c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train")
+    
+    if use_modelscope:
+        from modelscope.msdatasets import MsDataset
+        ds_dict =  MsDataset.load("allenai/c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train")
+    else:
+        ds_dict = load_dataset("allenai/c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train")
     
     tokenized_samples = []
     
-    for example in ds_dict.shuffle(seed=42).select(range(n_samples * 2)): # Oversample to ensure we get enough long samples
+    for example in ds_dict.shuffle(seed=42).select(range(n_samples * 4)): # Oversample to ensure we get enough long samples
         if len(tokenized_samples) == n_samples:
             break
         

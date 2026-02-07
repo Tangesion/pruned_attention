@@ -126,7 +126,15 @@ def evaluate_strategies(model, dataloader, device, compression_ratio=0.125, topk
                 q_proj = layer.self_attn.q_proj(hidden_states).view(bsz, q_len, num_heads, head_dim).transpose(1, 2)
                 k_proj = layer.self_attn.k_proj(hidden_states).view(bsz, q_len, num_kv_heads, head_dim).transpose(1, 2)
 
-                cos, sin = position_embeddings
+                # Use the captured position embeddings
+                if position_embeddings is None:
+                    # Fallback if not captured (should not happen if Catcher works)
+                     print("Warning: position_embeddings is None!")
+                     cos, sin = None, None
+                else:
+                    cos, sin = position_embeddings
+
+                # Apply RoPE for our metrics
                 q_states, k_states = apply_rotary_pos_emb(q_proj, k_proj, cos, sin)
 
                 # Full Attention Scores (Ground Truth)
@@ -191,12 +199,19 @@ def evaluate_strategies(model, dataloader, device, compression_ratio=0.125, topk
                 results["Random"].append(recall_rnd)
 
             # Forward pass for next layer
-            hidden_states = layer(
-                hidden_states,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                position_embeddings=position_embeddings
-            )[0]
+            try:
+                hidden_states = layer(
+                    hidden_states,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                    position_embeddings=position_embeddings
+                )[0]
+            except RuntimeError as e:
+                print(f"Error in layer {i}: {e}")
+                print(f"hidden_states: {hidden_states.shape}")
+                if position_embeddings:
+                    print(f"cos shape: {position_embeddings[0].shape}")
+                raise e
 
     # Aggregate results
     avg_results = {k: sum(v)/len(v) for k, v in results.items()}
