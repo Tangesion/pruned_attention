@@ -1,0 +1,19 @@
+{
+  "config": {
+    "model": "/home/tgx/models/Llama-3.2-1B",
+    "num_eval_tokens": 100,
+    "sink_size": 4,
+    "local_window": 16,
+    "escaped_layers": [],
+    "topk_ratios": [
+      0.1,
+      0.2
+    ]
+  },
+  "results": {
+    "full_attention": {
+      "0.1": 14.9375,
+      "0.2": 14.9375
+    }
+  }
+}

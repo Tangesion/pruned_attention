@@ -94,7 +94,7 @@ def get_compression_indices(
     return keep_indices
 
 
-def apply_compression_to_model(model, indices_path="indices.json", quant_mode=None, topk_ratio=0.1, sink_size=4, local_window=64):
+def apply_compression_to_model(model, model_name, quant_mode=None, topk_ratio=0.1, sink_size=4, local_window=64, escaped_layers=[]):
     """
     Replaces the standard LlamaAttention layers in a model with CompressedLlamaAttention
     layers, configured with pre-calculated indices.
@@ -107,6 +107,9 @@ def apply_compression_to_model(model, indices_path="indices.json", quant_mode=No
     Returns:
         The modified model.
     """
+    
+    indices_path = os.path.join("data", model_name, "indices.json")
+    
     print(f"Loading indices from {indices_path}...")
     with open(indices_path, 'r') as f:
         indices_data = json.load(f)
@@ -115,6 +118,7 @@ def apply_compression_to_model(model, indices_path="indices.json", quant_mode=No
     config.topk_ratio = topk_ratio
     config.sink_size = sink_size
     config.local_window = local_window
+    config.escaped_layers = escaped_layers
     
     for i, layer in enumerate(tqdm(model.model.layers, desc="Replacing Attention Layers")):
         layer_idx_str = str(i)
@@ -137,7 +141,7 @@ def apply_compression_to_model(model, indices_path="indices.json", quant_mode=No
     return model
 
 
-def run_calibration_and_save_indices(model: LlamaForCausalLM, calibration_data: torch.Tensor, device: torch.device, save_path="indices.json", model_name="llama3"):
+def run_calibration_and_save_indices(model: LlamaForCausalLM, calibration_data: torch.Tensor, device: torch.device, model_name="llama3"):
     """
     Runs the calibration process and saves the calculated dimension indices to a file.
     
@@ -158,100 +162,109 @@ of
     layers = model.model.layers
     
     dtype = next(iter(model.parameters())).dtype
+    # calibration_data: [Batch, Seq] (token ids)
     inps = torch.zeros((calibration_data.shape[0], calibration_data.shape[1], model.config.hidden_size), dtype=dtype, device=device)
     inps.requires_grad = False
     
-    cache = {}
+    cache = {'i': 0, 'attention_mask': None, "position_ids": None}
 
     class Catcher(nn.Module):
         def __init__(self, module):
             super().__init__()
             self.module = module
         def forward(self, inp, **kwargs):
-            cache['hidden_states'] = inp
+            inps[cache['i']] = inp
+            cache['i'] += 1
             cache['attention_mask'] = kwargs.get('attention_mask')
             cache['position_ids'] = kwargs.get('position_ids')
             cache['position_embeddings'] = kwargs.get('position_embeddings')
-            raise StopIteration
-
-    original_layer_0 = layers[0]
+            raise ValueError 
+    
     layers[0] = Catcher(layers[0])
     
-    try:
-        model(calibration_data.to(device))
-    except StopIteration:
-        pass # Expected exception
-    finally:
-        layers[0] = original_layer_0
+    for i in range(calibration_data.shape[0]):
+        try:
+            model(calibration_data[i].unsqueeze(0).to(device))
+        except ValueError:
+            pass
     
+    layers[0] = layers[0].module 
     
-    inps = cache['hidden_states']
+    outs = torch.zeros_like(inps)
     attention_mask = cache['attention_mask']
-    pos_emb_tuple = cache['position_embeddings']
     position_ids = cache['position_ids']
+    pos_emb_tuple = cache['position_embeddings']
+    
 
     indices_dict = {} 
 
     print("Processing layers to calculate compression indices...")
-    with torch.no_grad():
-        for i in tqdm(range(len(layers))):
-            layer = layers[i]
-            
-            layer_indices = get_compression_indices(
-                layer.self_attn, 
-                inps, 
-                pos_emb_tuple, 
-                attention_mask=attention_mask,
-                compression_ratio=0.125,
-                topk_ratio=0.2
-            )
-            indices_dict[str(i)] = layer_indices.cpu().tolist()
-            
-            # Pass the outputs of the current layer as inputs to the next
-            inps = layer(
-                inps, 
-                attention_mask=attention_mask, 
-                position_ids=position_ids,
-                position_embeddings=pos_emb_tuple
-            )[0]
-            
-            torch.cuda.empty_cache()
+    for i in tqdm(range(len(layers))):
+        layer = layers[i]
+        
+        sample_input = inps.to(device) # [bsz, Seq, Hidden]
+        
+        layer_indices = get_compression_indices(
+            layer.self_attn, 
+            sample_input, 
+            pos_emb_tuple, 
+            attention_mask=attention_mask,
+            compression_ratio=0.125,
+            topk_ratio=0.2
+        )
+        indices_dict[str(i)] = layer_indices.cpu().tolist()
+        
+        for j in range(calibration_data.shape[0]):
+            with torch.no_grad():
+                outs[j] = layer(
+                    inps[j].unsqueeze(0), 
+                    attention_mask=attention_mask, 
+                    position_ids=position_ids,
+                    position_embeddings=pos_emb_tuple
+                )[0]
+        
+        # Swap buffers
+        inps.copy_(outs) 
+        
+        torch.cuda.empty_cache()
 
     model.config.use_cache = use_cache
     
     base_dirname = "data"
-    os.mkdir(os.path.dirname(base_dirname), exist_ok=True)
+    os.makedirs(base_dirname, exist_ok=True)
     model_dirname = os.path.join(base_dirname, model_name)
-    os.mkdir(model_dirname, exist_ok=True)
-    save_path = os.path.join(model_dirname, save_path)
+    os.makedirs(model_dirname, exist_ok=True)
+    save_path = os.path.join(model_dirname, "indices.json")
     with open(save_path, "w") as f:
         json.dump(indices_dict, f, indent=4)
     print(f"All indices saved to {save_path}")
     
 
-def get_c4_simple(tokenizer, n_samples: int, seq_len: int, use_modelscope: bool = False):
-    """
-    Downloads and prepares a small subset of the C4 dataset for calibration.
-    """
-    
-    if use_modelscope:
-        from modelscope.msdatasets import MsDataset
-        ds_dict =  MsDataset.load("allenai/c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train")
-    else:
-        ds_dict = load_dataset("allenai/c4", data_files={"train": "en/c4-train.00000-of-01024.json.gz"}, split="train")
-    
-    tokenized_samples = []
-    
-    for example in ds_dict.shuffle(seed=42).select(range(n_samples * 4)): # Oversample to ensure we get enough long samples
-        if len(tokenized_samples) == n_samples:
-            break
-        
-        text = example["text"]
-        tokens = tokenizer(text, return_tensors="pt", max_length=seq_len, truncation=True).input_ids
-        if tokens.shape[1] == seq_len:
-            tokenized_samples.append(tokens)
+def get_c4_simple(tokenizer, n_samples, seq_len):
+    ds_dict = load_dataset(
+        "allenai/c4",
+        data_files={"train": "en/c4-train.00000-of-01024.json.gz"}
+    )
+    ds = ds_dict["train"]
+    n_items = len(ds)
 
-    if len(tokenized_samples) < n_samples:
-        raise ValueError(f"Could not find {n_samples} samples with length {seq_len}. Found {len(tokenized_samples)}.")
+    tokenized_samples, used_indices = [], set()
+
+    for _ in range(n_samples):
+        while True:
+            sample_idx = random.randint(0, n_items - 1)
+            if sample_idx in used_indices:
+                continue
+            text = ds[sample_idx]["text"]
+            tokenized_sample = tokenizer(text, return_tensors="pt")
+            if tokenized_sample.input_ids.shape[1] >= seq_len:
+                used_indices.add(sample_idx)
+                break
+
+        max_start = tokenized_sample.input_ids.shape[1] - seq_len
+        start = random.randint(0, max_start)
+        tokenized_samples.append(
+            tokenized_sample.input_ids[:, start:start + seq_len]
+        )
 
     return torch.cat(tokenized_samples, dim=0)

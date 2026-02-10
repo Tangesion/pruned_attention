@@ -164,7 +164,8 @@ class CompressedLlamaAttention(nn.Module):
         #self.topk_ratio = 0.05
         self.topk_ratio = config.topk_ratio
         self.layer_idx = original_layer.layer_idx
-        self.escaped_layer = [0, 1, 30, 31]
+        #self.escaped_layer = [0, 1, 30, 31]
+        self.escaped_layer = config.escaped_layers
         self.attention_dropout = original_layer.attention_dropout
         self.sink_size = config.sink_size
         self.local_window = config.local_window
@@ -470,33 +471,41 @@ class CompressedLlamaAttention(nn.Module):
                 # 需要将 sink/local 索引扩展维度以匹配 batch 和 head
                 # topk_indices shape: [B, H, 1, k_val]
                 bsz_rt, num_heads_rt, _, _ = topk_indices.shape
-                
-                indices_list = []
-                if self.sink_size > 0:
-                    indices_list.append(sink_indices.view(1, 1, 1, -1).expand(bsz_rt, num_heads_rt, 1, -1))
-                if self.local_window > 0:
-                    indices_list.append(local_indices.view(1, 1, 1, -1).expand(bsz_rt, num_heads_rt, 1, -1))
-                indices_list.append(topk_indices)
-                
-                # [B, H, 1, Total_Selected]
-                all_indices = torch.cat(indices_list, dim=-1)
-                
-                # 排序索引，有助于内存访问连续性 (RoPE 依赖位置)
-                all_indices, _ = torch.sort(all_indices, dim=-1)
 
-                # Gather Logic: [B, Num_Q, Seq, Full_Dim]
-                # Expand indices: [B, Num_Q, 1, Total_Selected] -> [B, Num_Q, Total_Selected, Full_Dim]
-                idx_gather = all_indices.view(bsz_rt, num_heads_rt, -1, 1).expand(-1, -1, -1, self.head_dim)
-                
-                k_selected = torch.gather(k_full, 2, idx_gather)
-                v_selected = torch.gather(value_states, 2, idx_gather)
-                
-                refined_scores = torch.matmul(q_full, k_selected.transpose(2, 3)) * self.scaling
-                
-                attn_weights = F.softmax(refined_scores, dim=-1)
-                
-                attn_output = torch.matmul(attn_weights, v_selected)
-                attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, q_len, -1)
-                attn_output = self.o_proj(attn_output)
+                # 如果选择的数量已经覆盖全部序列，直接使用全部 KV，避免稀疏开销
+                if self.sink_size + self.local_window + k_val >= kv_seq_len:
+                    refined_scores = torch.matmul(q_full, k_full.transpose(2, 3)) * self.scaling
+                    attn_weights = F.softmax(refined_scores, dim=-1)
+                    attn_output = torch.matmul(attn_weights, value_states)
+                    attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, q_len, -1)
+                    attn_output = self.o_proj(attn_output)
+                else:
+                    indices_list = []
+                    if self.sink_size > 0:
+                        indices_list.append(sink_indices.view(1, 1, 1, -1).expand(bsz_rt, num_heads_rt, 1, -1))
+                    if self.local_window > 0:
+                        indices_list.append(local_indices.view(1, 1, 1, -1).expand(bsz_rt, num_heads_rt, 1, -1))
+                    indices_list.append(topk_indices)
+
+                    # [B, H, 1, Total_Selected]
+                    all_indices = torch.cat(indices_list, dim=-1)
+
+                    # 排序索引，有助于内存访问连续性 (RoPE 依赖位置)
+                    all_indices, _ = torch.sort(all_indices, dim=-1)
+
+                    # Gather Logic: [B, Num_Q, Seq, Full_Dim]
+                    # Expand indices: [B, Num_Q, 1, Total_Selected] -> [B, Num_Q, Total_Selected, Full_Dim]
+                    idx_gather = all_indices.view(bsz_rt, num_heads_rt, -1, 1).expand(-1, -1, -1, self.head_dim)
+
+                    k_selected = torch.gather(k_full, 2, idx_gather)
+                    v_selected = torch.gather(value_states, 2, idx_gather)
+
+                    refined_scores = torch.matmul(q_full, k_selected.transpose(2, 3)) * self.scaling
+
+                    attn_weights = F.softmax(refined_scores, dim=-1)
+
+                    attn_output = torch.matmul(attn_weights, v_selected)
+                    attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, q_len, -1)
+                    attn_output = self.o_proj(attn_output)
                 
             return attn_output, attn_weights

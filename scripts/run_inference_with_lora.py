@@ -3,7 +3,7 @@
 import torch
 import os
 import sys
-from transformers import AutoTokenizer, StoppingCriteria, StoppingCriteriaList, LlamaForCausalLM
+from transformers import AutoTokenizer, StoppingCriteria, StoppingCriteriaList, LlamaForCausalLM, TextStreamer
 from peft import PeftModel
 
 # Add project root to Python path
@@ -13,9 +13,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from src.pruned_attention.calibration import apply_compression_to_model
 from src.pruned_attention.attention import KVWithSmallKCache
 
-BASE_MODEL_ID = "/home/tgx/data/models/Llama-3-8B-Instruct"
-DISTILLED_DIR = "./compressed_llama_distilled_topk"
-adapter_model_path = "./lora_all_mixed/final_checkpoint"
+BASE_MODEL_ID = "/home/tgx/models/Llama-3.2-1B"
+INDICES_PATH = "data/Llama-3.2-1B/indices.json"
+#DISTILLED_DIR = "./compressed_llama_distilled_topk"
+#adapter_model_path = "./lora_all_mixed/final_checkpoint"
 
 
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_ID)
@@ -26,10 +27,11 @@ base_model = LlamaForCausalLM.from_pretrained(
     attn_implementation="eager"
 )
 config = base_model.config
-model = apply_compression_to_model(base_model)
+model_name = os.path.basename(BASE_MODEL_ID)
+model = apply_compression_to_model(base_model, model_name)
 
 small_state = torch.load(
-    "./compressed_llama_distilled_topk_wo_sink/small_attn_weights.pt",
+    "data/Llama-3.2-1B/small_attn_weights.pt",
     map_location="cpu"
 )
 base_state = model.state_dict()
@@ -45,8 +47,13 @@ lora_model = model
 lora_model.eval()
 
 with open("prompt1.txt", "r", encoding="utf-8") as f:
-    prompt = f.read()
+    prompt = f.read().strip()
 
+# 移除可能存在的 EOS 标记，避免“立即停止生成”
+if tokenizer.eos_token:
+    prompt = prompt.replace(tokenizer.eos_token, "")
+#print(prompt)
+#prompt = "Write a poem about the sea:\n"
 inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 input_len = inputs["input_ids"].shape[1]
 
@@ -70,20 +77,26 @@ class StreamTokens(StoppingCriteria):
             self.last_printed = cur_len
 
         return False
+max_ctx = getattr(base_model.config, "max_position_embeddings")
+print(max_ctx)
 
-
-streamer = StreamTokens(tokenizer, input_len)
+#streamer = StreamTokens(tokenizer, input_len)
+streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
 kv_cache = KVWithSmallKCache(config=config)
 output = lora_model.generate(
     **inputs,
     max_new_tokens=256,
+    min_new_tokens=1,
     use_cache=True,
     do_sample=True,
     past_key_values=kv_cache,
     temperature=0.7,
     top_p=0.9,
     repetition_penalty=1.2,
-    stopping_criteria=StoppingCriteriaList([streamer]),
+    streamer=streamer,
+    eos_token_id=None,
+    #stopping_criteria=StoppingCriteriaList([streamer]),
 )
 
-print()
+print("\n---\n")
+print(tokenizer.decode(output[0], skip_special_tokens=True))

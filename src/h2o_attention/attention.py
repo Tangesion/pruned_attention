@@ -23,7 +23,7 @@ class LlamaAttention_heavy_hitter(nn.Module):
         self.config = config
         self.layer_idx = layer_idx
         self.head_dim = getattr(config, "head_dim", config.hidden_size // config.num_attention_heads)
-        self.num_attention_heads = config.num_attention_heads # Ensure this attribute exists
+        self.num_attention_heads = config.num_attention_heads  # Ensure this attribute exists
         self.num_key_value_groups = config.num_attention_heads // config.num_key_value_heads
         self.scaling = self.head_dim**-0.5
         self.attention_dropout = config.attention_dropout
@@ -33,24 +33,21 @@ class LlamaAttention_heavy_hitter(nn.Module):
         self.k_proj = original_layer.k_proj
         self.v_proj = original_layer.v_proj
         self.o_proj = original_layer.o_proj
-        
+
         # --- New Configurations ---
-        self.escaped_layers = [0, 1, 30, 31]
-        #self.sink_size = 4 # Number of sink tokens to always keep
-        #self.local_window = 64 # Fixed size local window (recent tokens)
-        
+        self.escaped_layers = getattr(config, "escaped_layers", [])
+
         # heavy_ratio is still a ratio for Heavy Hitters
-        self.heavy_budget_ratio = getattr(config, "heavy_ratio", 0.1) 
+        self.heavy_budget_ratio = getattr(config, "heavy_ratio", 0.1)
         self.sink_size = getattr(config, "sink_size", 4)
         self.local_window = getattr(config, "local_window", 64)
-        
-        
-        self.attention_masks_next = None 
+
+        self.attention_masks_next = None
         self.heavy_budget = None
         self.previous_scores = None
 
     def _reset_masks(self):
-        self.attention_masks_next = None 
+        self.attention_masks_next = None
         self.heavy_budget = None
         self.previous_scores = None
 
@@ -59,7 +56,7 @@ class LlamaAttention_heavy_hitter(nn.Module):
         hidden_states: torch.Tensor,
         position_embeddings: tuple[torch.Tensor, torch.Tensor],
         attention_mask: Optional[torch.Tensor],
-        past_key_values = None,
+        past_key_values=None,
         cache_position: Optional[torch.LongTensor] = None,
         **kwargs,
     ) -> tuple[torch.Tensor, torch.Tensor]:
@@ -90,7 +87,6 @@ class LlamaAttention_heavy_hitter(nn.Module):
 
         # --- Escape Layer Logic ---
         if self.layer_idx in self.escaped_layers:
-            # Standard Attention for escaped layers
             attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
             attn_output = torch.matmul(attn_weights, value_states)
             attn_output = attn_output.transpose(1, 2).contiguous().reshape(bsz, q_len, dim)
@@ -99,96 +95,72 @@ class LlamaAttention_heavy_hitter(nn.Module):
 
         # --- H2O Logic ---
         if self.attention_masks_next is not None:
-            # Apply mask from previous step
             attn_weights = attn_weights * self.attention_masks_next + (1 - self.attention_masks_next) * torch.finfo(attn_weights.dtype).min
 
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
 
         # Accumulate attention scores for H2O selection
-        # attn_weights shape: (BS, heads, q-tokens, k-tokens)
-        # We sum over q-tokens to get importance score for each k-token
-        current_scores_sum = attn_weights.sum(0).sum(1) # (heads, k-tokens)
+        # attn_weights shape: (bsz, heads, q-tokens, k-tokens)
+        # Sum over q-tokens -> importance per (bsz, head, k-token)
+        current_scores_sum = attn_weights.sum(dim=2)  # (bsz, heads, k-tokens)
 
         if self.previous_scores is not None:
-            # Add to historical scores (excluding the new token itself)
-            current_scores_sum[:, :-1] += self.previous_scores 
-        else:
-            # First step initialization
-            self.heavy_budget = int(self.heavy_budget_ratio * current_scores_sum.shape[-1])
-            
+            current_scores_sum[..., :-1] += self.previous_scores
+
+        # Update budget every step based on current sequence length
+        attn_tokens_all = current_scores_sum.shape[-1]
+        self.heavy_budget = max(1, int(self.heavy_budget_ratio * attn_tokens_all)) if self.heavy_budget_ratio > 0 else 0
+
         dtype_attn_weights = attn_weights.dtype
         attn_weights_devices = attn_weights.device
-        
+
         # Update previous scores
-        self.previous_scores = current_scores_sum 
+        self.previous_scores = current_scores_sum
 
         # --- Construct Next Step Mask ---
-        # Mask shape: [Heads, Total_KV_Len + 1] (Prepare for next token)
-        # Initialize with 1s
-        attn_mask = torch.ones(current_scores_sum.shape[0], current_scores_sum.shape[1]+1).to(dtype_attn_weights).to(attn_weights_devices)
+        # Mask shape: [bsz, heads, Total_KV_Len + 1] (Prepare for next token)
+        attn_mask = torch.ones(
+            current_scores_sum.shape[0],
+            current_scores_sum.shape[1],
+            current_scores_sum.shape[2] + 1,
+            device=attn_weights_devices,
+            dtype=dtype_attn_weights,
+        )
 
-        attn_tokens_all = self.previous_scores.shape[-1]
-        
-        # Calculate total budget needed (Sink + Local + Heavy)
-        # Note: Logic below decides what to KEEP (set to 1), others set to 0
-        
         # If sequence is long enough to need pruning
         if attn_tokens_all > (self.sink_size + self.local_window + self.heavy_budget):
-            
             # 1. Initialize mask to 0 (prune everything by default)
-            attn_mask[:, :] = 0
-            
-            # 2. Keep Sink Tokens (Always keep the first few tokens)
+            attn_mask.zero_()
+
+            # 2. Keep Sink Tokens
             if self.sink_size > 0:
-                attn_mask[:, :self.sink_size] = 1
-            
+                attn_mask[..., :self.sink_size] = 1
+
             # 3. Keep Local Window (Recent tokens)
             if self.local_window > 0:
-                # Keep the most recent 'local_window' tokens
-                # Note: attn_mask has size N+1, we are masking the N existing tokens
-                # The N+1 th token is the new one coming in, which is usually kept implicitly or handled next step
-                # Here we mask the history.
-                attn_mask[:, -self.local_window:] = 1
-                
-                # Define the set of tokens available for Heavy Hitter selection
-                # We exclude Sink and Local window from the "candidate pool" to avoid double counting
-                # or selecting tokens that are already kept.
-                # Candidates are in range [sink_size : -local_window]
+                attn_mask[..., -self.local_window:] = 1
                 candidate_start = self.sink_size
                 candidate_end = max(candidate_start, attn_tokens_all - self.local_window)
-                
-                selected_set = self.previous_scores[:, candidate_start:candidate_end]
+                selected_set = self.previous_scores[..., candidate_start:candidate_end]
             else:
-                # If no local window, candidates are everything after sink
                 candidate_start = self.sink_size
-                selected_set = self.previous_scores[:, candidate_start:]
+                selected_set = self.previous_scores[..., candidate_start:]
 
             # 4. Keep Heavy Hitters (Top-K from candidates)
-            if self.heavy_budget > 0 and selected_set.shape[1] > 0:
-                # Adjust k if candidates are fewer than budget
-                k_val = min(self.heavy_budget, selected_set.shape[1])
+            if self.heavy_budget > 0 and selected_set.shape[-1] > 0:
+                k_val = min(self.heavy_budget, selected_set.shape[-1])
                 _, keep_topk = selected_set.topk(k=k_val, dim=-1, largest=True)
-                
-                # keep_topk indices are relative to selected_set
-                # We need to shift them back to absolute indices
                 keep_topk = keep_topk + candidate_start
-                
                 attn_mask = attn_mask.scatter(-1, keep_topk, 1)
 
-        # Save mask for next step: [1, Heads, 1, Seq_Len]
-        self.attention_masks_next = attn_mask.clone().unsqueeze(0).unsqueeze(2)
+        # Save mask for next step: [bsz, heads, 1, Seq_Len]
+        self.attention_masks_next = attn_mask.unsqueeze(2)
 
         # Apply mask to previous_scores to "forget" pruned tokens scores
-        # This prevents pruned tokens from accumulating score and coming back
-        # We only keep scores for tokens that survived the mask (excluding the new placeholder)
-        score_mask = attn_mask[:, :-1] 
-        
-        # Important: Always keep scores for Local Window tokens even if they weren't top-k
-        # (They are kept by local window logic, so their scores should persist)
+        score_mask = attn_mask[..., :-1]
         if self.local_window > 0:
-            score_mask[:, -self.local_window:] = 1
-            
+            score_mask[..., -self.local_window:] = 1
         self.previous_scores = self.previous_scores * score_mask
 
         attn_output = torch.matmul(attn_weights, value_states)
@@ -199,10 +171,9 @@ class LlamaAttention_heavy_hitter(nn.Module):
 
 
 def convert_kvcache_llama_heavy_recent(model, config):
-
     for i, layer in enumerate(tqdm(model.model.layers, desc="Replacing Attention Layers")):
         heavy_recent_attn = LlamaAttention_heavy_hitter(config, layer.self_attn, layer_idx=i).to(model.device)
         model.model.layers[i].self_attn = heavy_recent_attn
-        
+
     print("h2o applied successfully!")
     return model

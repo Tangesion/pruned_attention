@@ -28,8 +28,8 @@ class CompressedLlamaAttentionTopKDistillWrapper(nn.Module):
         for p in self.layer.parameters():
             p.requires_grad = False
         
-        self.layer.q_proj_small.weight = nn.Parameter(self.layer.q_proj_small.weight.float())
-        self.layer.k_proj_small.weight = nn.Parameter(self.layer.k_proj_small.weight.float())
+        self.layer.q_proj_small.weight = nn.Parameter(self.layer.q_proj_small.weight)
+        self.layer.k_proj_small.weight = nn.Parameter(self.layer.k_proj_small.weight)
         
         self.layer.q_proj_small.weight.requires_grad = True
         self.layer.k_proj_small.weight.requires_grad = True
@@ -93,23 +93,8 @@ class CompressedLlamaAttentionTopKDistillWrapper(nn.Module):
         loss_fct = nn.MarginRankingLoss(margin=1.0)
         target = torch.ones(len(pos_scores), device=hidden_states.device)
         
-        return loss_fct(pos_scores, neg_scores_sampled, target)
+        return loss_fct(pos_scores, neg_scores_sampled, target), student_scores, teacher_scores
 
-
-class CompressedLlamaAttentionKLDistillWrapper(nn.Module):
-    """
-    A wrapper for distillation that trains the small projection layers of 
-    CompressedLlamaAttention using KL-divergence loss.
-    """
-    def __init__(self, compressed_layer, original_layer_config):
-        super().__init__()
-        self.layer = compressed_layer 
-        self.config = original_layer_config
-        # ... (rest of the implementation is similar to TopKDistillWrapper)
-
-    def forward(self, hidden_states, position_embeddings, attention_mask=None, temperature: float = 2.0):
-        # ... (Implementation of KL-divergence loss)
-        pass # Not used in the main script, so can be left as a stub for now
 
 
 def _get_layer_inputs(model, dataloader, device, num_samples=128):
@@ -173,11 +158,17 @@ def train_layer_wise_distillation(
     with open(indices_path, 'r') as f:
         indices_data = json.load(f)
 
+    model.config.topk_ratio = 0.2
+    model.config.sink_size = 0
+    model.config.local_window = 0
+    model.config.escaped_layers = []
+
     for i in range(model.config.num_hidden_layers):
         print(f"\n=== Processing Layer {i}/{model.config.num_hidden_layers} ===")
         layer = model.model.layers[i]
         
         keep_indices = torch.tensor(indices_data[str(i)], dtype=torch.long).to(device)
+        
         
         # This replaces the original self_attn with the compressed version for distillation
         compressed_attn = CompressedLlamaAttention(
@@ -207,7 +198,7 @@ def train_layer_wise_distillation(
                 batch_attn_mask = attention_mask[:, :, :batch_hidden.shape[1], :batch_hidden.shape[1]]
 
 
-                loss = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
+                loss, _, _ = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
                 loss.backward()
                 
                 torch.nn.utils.clip_grad_norm_(distill_wrapper.parameters(), max_norm=1.0)
@@ -239,7 +230,7 @@ def train_layer_wise_distillation(
                     batch_hidden, 
                     attention_mask=batch_attn_mask,
                     position_embeddings=batch_pos_emb
-                )[0] # layer_output is a tuple
+                )
                 
                 new_hidden_states_list.append(layer_output.cpu())
 

@@ -24,12 +24,6 @@ def main():
         help="Path to the pretrained Llama model."
     )
     parser.add_argument(
-        "--output_path",
-        type=str,
-        default="indices.json",
-        help="Path to save the output indices JSON file."
-    )
-    parser.add_argument(
         "--num_samples",
         type=int,
         default=16,
@@ -76,7 +70,6 @@ def main():
         model, 
         calibration_data, 
         device, 
-        save_path=args.output_path,
         model_name=model_name
     )
 
