@@ -9,6 +9,9 @@
     "vicuna-v1.5-7b-16k": "lmsys/vicuna-7b-v1.5-16k",
     "llama3-8b-instruct": "/home/tgx/data/models/Llama-3-8B-Instruct",
     "llama3-8b-compress": "/home/tgx/data/models/Llama-3-8B-Instruct",
-    "llama3-8b-h2o": "/home/tgx/data/models/Llama-3-8B-Instruct"
+    "llama3-8b-h2o": "/home/tgx/data/models/Llama-3-8B-Instruct",
+    "llama-3.2-1B-compress": "/home/tgx/models/Llama-3.2-1B",
+    "llama-3.2-1B": "/home/tgx/models/Llama-3.2-1B",
+    "llama-3.2-h2o": "/home/tgx/models/Llama-3.2-1B"
 
 }

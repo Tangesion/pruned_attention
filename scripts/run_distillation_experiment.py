@@ -4,21 +4,19 @@ import argparse
 import os
 import sys
 import json
-import numpy as np
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoTokenizer, LlamaForCausalLM
 from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
 
 # Add project root to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.pruned_attention.calibration import get_c4_simple, get_compression_indices, apply_compression_to_model
+from src.pruned_attention.calibration import get_c4_simple, apply_compression_to_model
 from src.pruned_attention.attention import CompressedLlamaAttention, repeat_kv
 from src.pruned_attention.distillation import CompressedLlamaAttentionTopKDistillWrapper, _get_layer_inputs
 
-# Try to import ppl_eval_parallel from run_pg16_ppl_test.py in the same directory
+# 优先使用并行PPL评估
 try:
     from run_pg16_ppl_test import ppl_eval_parallel
 except ImportError:
@@ -27,23 +25,21 @@ except ImportError:
     except ImportError:
         print("Warning: Could not import ppl_eval_parallel. PPL testing will be skipped.")
         def ppl_eval_parallel(model, tokenizer, args=None):
-            return 0.0
+            return None
 
-# --- 1. Define MSE Distillation Wrapper ---
+
 class CompressedLlamaAttentionMSEDistillWrapper(nn.Module):
     def __init__(self, compressed_layer, original_layer_config):
         super().__init__()
         self.layer = compressed_layer
         self.config = original_layer_config
         self.head_dim = self.layer.head_dim
-        self.scaling = self.head_dim**-0.5
+        self.scaling = self.head_dim ** -0.5
         self.num_key_value_groups = self.layer.num_key_value_groups
 
-        # Freeze all except small projections
         for p in self.layer.parameters():
             p.requires_grad = False
 
-        # Make small projections trainable
         self.layer.q_proj_small.weight = nn.Parameter(self.layer.q_proj_small.weight)
         self.layer.k_proj_small.weight = nn.Parameter(self.layer.k_proj_small.weight)
         self.layer.q_proj_small.weight.requires_grad = True
@@ -54,83 +50,57 @@ class CompressedLlamaAttentionMSEDistillWrapper(nn.Module):
     def forward(self, hidden_states, position_embeddings, attention_mask=None):
         bsz, q_len, _ = hidden_states.shape
 
-        # Teacher (Full Attention)
         with torch.no_grad():
             q_full = self.layer.q_proj(hidden_states).view(bsz, q_len, self.layer.num_q_heads, self.head_dim).transpose(1, 2)
             k_full = self.layer.k_proj(hidden_states).view(bsz, q_len, self.layer.num_kv_heads, self.head_dim).transpose(1, 2)
-
             cos, sin = position_embeddings
-            # Expand cos/sin to match batch size if needed (fix from Exp 4)
-            # Actually apply_rotary_pos_emb in HF handles broadcasting usually,
-            # but let's ensure we pass correct shapes if wrapper expects it.
-            # In distillation.py, it expects tuple.
             q_full, k_full = apply_rotary_pos_emb(q_full, k_full, cos, sin)
-
             k_full = repeat_kv(k_full, self.num_key_value_groups)
             teacher_scores = torch.matmul(q_full, k_full.transpose(2, 3)) * self.scaling
             if attention_mask is not None:
                 teacher_scores = teacher_scores + attention_mask
 
-        # Student (Compressed Attention)
-        q_small = self.layer.q_proj_small(hidden_states).view(bsz, q_len, self.layer.num_q_heads, self.layer.compressed_dim).transpose(1, 2)
-        k_small = self.layer.k_proj_small(hidden_states).view(bsz, q_len, self.layer.num_kv_heads, self.layer.compressed_dim).transpose(1, 2)
-
-        # Mixed RoPE
+        q_small = self.layer.q_proj_small(hidden_states).view(
+            bsz, q_len, self.layer.num_q_heads, self.layer.compressed_dim
+        ).transpose(1, 2)
+        k_small = self.layer.k_proj_small(hidden_states).view(
+            bsz, q_len, self.layer.num_kv_heads, self.layer.compressed_dim
+        ).transpose(1, 2)
         q_small, k_small = self.layer.apply_mixed_index_rope(q_small, k_small, position_embeddings)
         k_small = repeat_kv(k_small, self.num_key_value_groups)
-
-        student_scores = torch.matmul(q_small, k_small.transpose(2, 3)) * (self.layer.compressed_dim**-0.5)
+        student_scores = torch.matmul(q_small, k_small.transpose(2, 3)) * (self.layer.compressed_dim ** -0.5)
         if attention_mask is not None:
             student_scores = student_scores + attention_mask
-        # MSE Loss
-        # Mask out padding/masked positions to avoid learning from -inf
+
         if attention_mask is not None:
-             # Typically attention_mask is 0 for valid, large negative for masked
-             # We only want to compute MSE on valid tokens
-             valid_mask = (attention_mask > -1000).expand_as(student_scores)
-             return self.loss_fct(student_scores[valid_mask], teacher_scores[valid_mask]), student_scores, teacher_scores
-        else:
-            return self.loss_fct(student_scores, teacher_scores), student_scores, teacher_scores
+            valid_mask = (attention_mask > -1000).expand_as(student_scores)
+            return self.loss_fct(student_scores[valid_mask], teacher_scores[valid_mask]), student_scores, teacher_scores
+        return self.loss_fct(student_scores, teacher_scores), student_scores, teacher_scores
+
 
 def cal_recall(student_scores, teacher_scores, topk_ratio=0.1):
-    """
-    Calculates Top-K Recall between student and teacher attention scores.
-    """
     with torch.no_grad():
-        bsz, num_heads, q_len, kv_len = teacher_scores.shape
+        _, _, _, kv_len = teacher_scores.shape
         k_val = max(1, int(kv_len * topk_ratio))
-
-        # Ground Truth Indices (from Teacher)
         _, indices_true = torch.topk(teacher_scores, k=k_val, dim=-1)
-
-        # Predicted Indices (from Student)
         _, indices_pred = torch.topk(student_scores, k=k_val, dim=-1)
-
-        # Calculate intersection
-        # [B, H, Q, K, 1] == [B, H, Q, 1, K] -> [B, H, Q, K, K] -> any match in last dim
         matches = (indices_true.unsqueeze(-1) == indices_pred.unsqueeze(-2)).any(dim=-1).sum()
-
         total_k = indices_true.numel()
-        recall = matches.float() / total_k
-        return recall.item()
+        return (matches.float() / total_k).item()
+
 
 def collect_layer_wise_distillation(
     model,
     model_name,
-    loss_func:str,
+    loss_func: str,
     tokenizer,
     train_steps_per_layer=100,
     batch_size=4,
     lr=1e-3,
     seq_len=128,
-    num_calibration_samples=128
+    num_calibration_samples=128,
 ):
-    """
-    Performs layer-wise distillation to fine-tune the compressed attention projections.
-    """
     device = model.device
-
-    # Fix: Initialize as dict of lists, not set comprehension
     loss_history = {i: [] for i in range(model.config.num_hidden_layers)}
     recall_history = {}
 
@@ -139,12 +109,13 @@ def collect_layer_wise_distillation(
     dataset = TensorDataset(c4_data)
     dataloader = DataLoader(dataset, batch_size=batch_size)
 
-    hidden_states, attention_mask, position_embeddings = _get_layer_inputs(model, dataloader, device, num_samples=num_calibration_samples)
+    hidden_states, attention_mask, position_embeddings = _get_layer_inputs(
+        model, dataloader, device, num_samples=num_calibration_samples
+    )
 
     indices_path = os.path.join("data", model_name, "indices.json")
     print(f"Loading indices from {indices_path}...")
-
-    with open(indices_path, 'r') as f:
+    with open(indices_path, "r") as f:
         indices_data = json.load(f)
 
     model.config.topk_ratio = 0.2
@@ -155,25 +126,20 @@ def collect_layer_wise_distillation(
     for i in range(model.config.num_hidden_layers):
         print(f"\n=== Processing Layer {i}/{model.config.num_hidden_layers} ===")
         layer = model.model.layers[i]
-
         keep_indices = torch.tensor(indices_data[str(i)], dtype=torch.long).to(device)
 
-
-        # This replaces the original self_attn with the compressed version for distillation
         compressed_attn = CompressedLlamaAttention(
             model.config,
             layer.self_attn,
-            group_keep_indices=keep_indices
+            group_keep_indices=keep_indices,
         ).to(device)
 
         if loss_func == "mse":
             distill_wrapper = CompressedLlamaAttentionMSEDistillWrapper(compressed_attn, model.config).to(device)
-        elif loss_func == "topk":
+        else:
             distill_wrapper = CompressedLlamaAttentionTopKDistillWrapper(compressed_attn, model.config).to(device)
 
-        print(f"  Training small projections...")
         optimizer = torch.optim.AdamW(distill_wrapper.parameters(), lr=lr)
-
         layer_dataset = TensorDataset(hidden_states)
         layer_loader = DataLoader(layer_dataset, batch_size=batch_size, shuffle=True)
 
@@ -182,13 +148,9 @@ def collect_layer_wise_distillation(
         while step < train_steps_per_layer:
             for (batch_hidden,) in layer_loader:
                 batch_hidden = batch_hidden.to(device)
-
-                # We need to compute position embeddings for each batch
-                # as they are sequence length dependent and not constant
                 cos, sin = position_embeddings
                 batch_pos_emb = (cos[:, :batch_hidden.shape[1]], sin[:, :batch_hidden.shape[1]])
                 batch_attn_mask = attention_mask[:, :, :batch_hidden.shape[1], :batch_hidden.shape[1]]
-
 
                 loss, student_scores, teacher_scores = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
                 loss.backward()
@@ -203,12 +165,14 @@ def collect_layer_wise_distillation(
                 pbar.update(1)
 
                 if step == train_steps_per_layer - 1:
-                    recall_history[i] = cal_recall(student_scores, teacher_scores, topk_ratio=model.config.topk_ratio)
+                    recall_history[i] = cal_recall(
+                        student_scores, teacher_scores, topk_ratio=model.config.topk_ratio
+                    )
 
-                if step >= train_steps_per_layer: break
+                if step >= train_steps_per_layer:
+                    break
         pbar.close()
 
-        # Replace the layer's attention module with the distilled one
         model.model.layers[i].self_attn = compressed_attn
 
         print(f"  Generating inputs for Layer {i+1}...")
@@ -217,62 +181,128 @@ def collect_layer_wise_distillation(
 
         with torch.no_grad():
             for (batch_hidden,) in tqdm(gen_loader, desc="Forwarding"):
-                #print(batch_hidden.shape)
                 batch_hidden = batch_hidden.to(device)
                 cos, sin = position_embeddings
                 batch_pos_emb = (cos[:, :batch_hidden.shape[1]], sin[:, :batch_hidden.shape[1]])
                 batch_attn_mask = attention_mask[:, :, :batch_hidden.shape[1], :batch_hidden.shape[1]]
-
-                # Must use the full LlamaDecoderLayer forward pass
                 layer_output = model.model.layers[i](
                     batch_hidden,
                     attention_mask=batch_attn_mask,
-                    position_embeddings=batch_pos_emb
-                ) # layer_output is a tuple
-                #print(layer_output.shape)
-                new_hidden_states_list.append(layer_output.cpu())
+                    position_embeddings=batch_pos_emb,
+                )
+                if isinstance(layer_output, tuple):
+                    layer_output = layer_output[0]
+                new_hidden_states_list.append(layer_output.detach().cpu())
 
         hidden_states = torch.cat(new_hidden_states_list, dim=0)
-
         del distill_wrapper
         torch.cuda.empty_cache()
 
-    print("\nDistillation Complete!")
     return model, loss_history, recall_history
 
 
-def measure_ppl(model, tokenizer, device):
-    print("Measuring PPL...")
-    class Args:
-        pass
-    args = Args()
-    args.device = str(device)
-    args.num_eval_tokens = 1024
-    try:
-        ppl = ppl_eval_parallel(model, tokenizer, args=args)
-        print(f"PPL: {ppl}")
-        return ppl
-    except Exception as e:
-        print(f"PPL evaluation failed: {e}")
-        import traceback
-        traceback.print_exc()
+def _safe_eval_name(name: str):
+    return name.replace("/", "_").replace(" ", "_")
+
+
+def _pick_main_ppl_from_multi(multi_ret, prefer_order=("wikitext", "pg19", "c4")):
+    if not multi_ret:
         return None
+    d = multi_ret.get("ppl_by_dataset", {})
+    for k in prefer_order:
+        if k in d and d[k] is not None:
+            return d[k]
+    for _, v in d.items():
+        if v is not None:
+            return v
+    return None
+
+
+def run_ppl_multidataset(
+    model,
+    tokenizer,
+    device,
+    output_dir,
+    method_name,
+    eval_specs,
+    num_eval_tokens=1024,
+    log_interval=64,
+    seq_len=2048,
+    batch_size=2,
+):
+    """
+    使用并行PPL评估（ppl_eval_parallel），并支持 num_eval_tokens 截断。
+    注意：要求 run_pg16_ppl_test.py 的 ppl_eval_parallel 支持 args.dataset / args.num_eval_tokens / args.output_file。
+    """
+    curves = {}
+    scalars = {}
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    for spec in eval_specs:
+        name = spec["name"]
+        dataset = spec.get("dataset", name)
+
+        curve_path = os.path.join(
+            output_dir, f"ppl_curve_{_safe_eval_name(method_name)}_{_safe_eval_name(name)}.json"
+        )
+
+        class EvalArgs:
+            pass
+
+        ea = EvalArgs()
+        ea.device = str(device)
+        ea.dataset = dataset
+        ea.num_eval_tokens = int(num_eval_tokens) if num_eval_tokens is not None else None
+        ea.output_file = curve_path
+        ea.log_interval = int(log_interval)
+        ea.model_seq_len = int(seq_len)
+        ea.batch_size = int(batch_size)
+
+        try:
+            ppl = ppl_eval_parallel(model, tokenizer, args=ea)
+            scalars[name] = ppl
+            curves[name] = curve_path if os.path.exists(curve_path) else None
+        except Exception as e:
+            print(f"[WARN] PPL eval failed on {name}: {e}")
+            scalars[name] = None
+            curves[name] = None
+    print(f"PPL Results for {method_name}: {scalars}")
+    return {"ppl_by_dataset": scalars, "ppl_curve_files": curves}
+
 
 def main():
     parser = argparse.ArgumentParser(description="Experiment 5: Distillation Effect (MSE vs TopK)")
-    parser.add_argument('--model_path', type=str, required=True, help="Path to Llama model")
-    parser.add_argument('--output_dir', type=str, default='experiment_5_results', help="Directory to save results")
-    parser.add_argument('--num_samples', type=int, default=512, help="Number of calibration samples")
-    parser.add_argument("--seq_len", type=int, default=512, help="Sequence length for calibration and distillation data.")
-    parser.add_argument('--steps_per_layer', type=int, default=50, help="Training steps per layer")
-    parser.add_argument('--compare', action='store_true', help="Run both MSE and TopK for comparison")
-    parser.add_argument('--method', type=str, default='topk', choices=['mse', 'topk'], help="Distillation method if not comparing")
+    parser.add_argument("--model_path", type=str, required=True)
+    parser.add_argument("--output_dir", type=str, default="experiment_5_results")
+    parser.add_argument("--num_samples", type=int, default=128)
+    parser.add_argument("--seq_len", type=int, default=512)
+    parser.add_argument("--steps_per_layer", type=int, default=50)
+    parser.add_argument("--compare", action="store_true")
+    parser.add_argument("--method", type=str, default="topk", choices=["mse", "topk"])
+
+    parser.add_argument("--num_eval_tokens", type=int, default=1024)
+    parser.add_argument("--log_interval", type=int, default=64)
+
+    parser.add_argument("--eval_pg19", action="store_true")
+    parser.add_argument("--eval_wikitext", action="store_true")
+    parser.add_argument("--eval_c4", action="store_true")
+    parser.add_argument("--eval_ptb", action="store_true")
+    parser.add_argument("--eval_lambada", action="store_true")
+    parser.add_argument("--eval_all", action="store_true")
+
+    parser.add_argument("--pg19_path", type=str, default=None)
+    parser.add_argument("--wikitext_path", type=str, default=None)
+    parser.add_argument("--c4_path", type=str, default=None)
+    parser.add_argument("--ptb_path", type=str, default=None)
+    parser.add_argument("--lambada_path", type=str, default=None)
+
+    parser.add_argument("--ppl_seq_len", type=int, default=2048)
+    parser.add_argument("--ppl_batch_size", type=int, default=2)
+
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
-
-    # Load Tokenizer
-    print(f"Loading tokenizer from {args.model_path}...")
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -280,184 +310,100 @@ def main():
     results = {}
     model_name = os.path.basename(args.model_path)
 
-    # --- Phase 1: Baseline (Before Distillation) ---
-    print(f"\n{'='*40}")
-    print(f"Phase 1: Measuring Baseline (Before Distillation)")
-    print(f"{'='*40}")
+    if args.eval_all:
+        args.eval_pg19 = True
+        args.eval_wikitext = True
+        args.eval_c4 = True
+        args.eval_ptb = True
+        args.eval_lambada = True
 
-    # We load model just for baseline PPL check
+    eval_specs = []
+    if args.eval_pg19:
+        eval_specs.append({"name": "pg19", "dataset": "pg19-test", "data_path": args.pg19_path})
+    if args.eval_wikitext:
+        eval_specs.append({"name": "wikitext", "dataset": "wikitext2", "data_path": args.wikitext_path})
+    if args.eval_c4:
+        eval_specs.append({"name": "c4", "dataset": "c4", "data_path": args.c4_path})
+    if args.eval_ptb:
+        eval_specs.append({"name": "ptb", "dataset": "ptb", "data_path": args.ptb_path})
+    if args.eval_lambada:
+        eval_specs.append({"name": "lambada", "dataset": "lambada", "data_path": args.lambada_path})
+
+    if len(eval_specs) == 0:
+        eval_specs.append({"name": "wikitext", "dataset": "wikitext2", "data_path": None})
+
+    print("Phase 1: Baseline")
     baseline_model = LlamaForCausalLM.from_pretrained(
-        args.model_path,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        attn_implementation="eager"
+        args.model_path, dtype=torch.bfloat16, device_map="auto", attn_implementation="eager"
     )
-
-    # Create Compressed Model (Without Distillation - i.e. just pruned, random/initial small weights)
-    # Note: apply_compression_to_model will initialize small projections.
-    # If we want to check "before distillation", we just check this state.
     baseline_model = apply_compression_to_model(
-        baseline_model,
-        model_name,
-        quant_mode="int",
-        topk_ratio=0.2, # Must match distillation config
-        sink_size=0,
-        local_window=0,
-        escaped_layers=[]
+        baseline_model, model_name, quant_mode="int", topk_ratio=0.2, sink_size=0, local_window=0, escaped_layers=[]
     )
 
-    ppl_before = measure_ppl(baseline_model, tokenizer, baseline_model.device)
-    results["before"] = {"ppl": ppl_before}
+    before_multi = run_ppl_multidataset(
+        baseline_model,
+        tokenizer,
+        baseline_model.device,
+        output_dir=args.output_dir,
+        method_name="before",
+        eval_specs=eval_specs,
+        num_eval_tokens=args.num_eval_tokens,
+        log_interval=args.log_interval,
+        seq_len=args.ppl_seq_len,
+        batch_size=args.ppl_batch_size,
+    )
+    results["before"] = {
+        "multi_dataset": before_multi,
+        "ppl": _pick_main_ppl_from_multi(before_multi),
+    }
 
     del baseline_model
     torch.cuda.empty_cache()
 
-    # Define runs
-    if args.compare:
-        methods = ["mse", "topk"]
-    else:
-        methods = [args.method]
-
+    methods = ["mse", "topk"] if args.compare else [args.method]
     for method in methods:
-        print(f"\n\n{'='*40}")
-        print(f"Running Distillation with {method.upper()} Loss")
-        print(f"{'='*40}")
-
-        # Load Model (Reload for each method to ensure fresh start)
-        print(f"Loading model from {args.model_path}...")
+        print(f"Running {method.upper()} distillation...")
         model = LlamaForCausalLM.from_pretrained(
-            args.model_path,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            attn_implementation="eager"
+            args.model_path, dtype=torch.bfloat16, device_map="auto", attn_implementation="eager"
         )
-
-        # Run Distillation
-        # Capture the distilled model
         distilled_model, loss_hist, recall_hist = collect_layer_wise_distillation(
             model=model,
-            model_name=os.path.basename(args.model_path),
+            model_name=model_name,
             loss_func=method,
             tokenizer=tokenizer,
             train_steps_per_layer=args.steps_per_layer,
             num_calibration_samples=args.num_samples,
-            seq_len=args.seq_len
+            seq_len=args.seq_len,
         )
 
-        # Measure PPL After Distillation
-        ppl_after = measure_ppl(distilled_model, tokenizer, distilled_model.device)
+        method_multi = run_ppl_multidataset(
+            distilled_model,
+            tokenizer,
+            distilled_model.device,
+            output_dir=args.output_dir,
+            method_name=method,
+            eval_specs=eval_specs,
+            num_eval_tokens=args.num_eval_tokens,
+            log_interval=args.log_interval,
+            seq_len=args.ppl_seq_len,
+            batch_size=args.ppl_batch_size,
+        )
 
         results[method] = {
             "loss": loss_hist,
             "recall": recall_hist,
-            "ppl": ppl_after
+            "multi_dataset": method_multi,
+            "ppl": _pick_main_ppl_from_multi(method_multi),
         }
 
-        # Cleanup
         del distilled_model
         torch.cuda.empty_cache()
 
-    # Save Results
     output_file = os.path.join(args.output_dir, "distillation_comparison.json")
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         json.dump(results, f, indent=2)
     print(f"Results saved to {output_file}")
 
-    # Plotting
-    try:
-        plt.figure(figsize=(18, 5))
-
-        # Plot Recall Comparison
-        plt.subplot(1, 3, 1)
-        for method in methods:
-            if method not in results: continue
-            data = results[method]
-            # Handle both string and int keys from potential json reload or in-memory dict
-            keys = list(data["recall"].keys())
-            layers = sorted([int(k) for k in keys])
-
-            recalls = []
-            for l in layers:
-                # Try int key first, then string key
-                if l in data["recall"]:
-                    recalls.append(data["recall"][l])
-                elif str(l) in data["recall"]:
-                    recalls.append(data["recall"][str(l)])
-
-            if len(recalls) == len(layers):
-                plt.plot(layers, recalls, marker='o', label=f"{method.upper()} Recall")
-        plt.xlabel("Layer Index")
-        plt.ylabel("Top-K Recall")
-        plt.title("Distillation Recall per Layer")
-        plt.legend()
-        plt.grid(True)
-
-        # Plot Loss (Layer 0)
-        plt.subplot(1, 3, 2)
-        for method in methods:
-            if method not in results: continue
-            data = results[method]
-
-            loss_data = None
-            if 0 in data["loss"]:
-                loss_data = data["loss"][0]
-            elif "0" in data["loss"]:
-                loss_data = data["loss"]["0"]
-
-            if loss_data:
-                plt.plot(loss_data, label=f"{method.upper()} Layer 0 Loss")
-        plt.xlabel("Step")
-        plt.ylabel("Loss")
-        plt.title("Layer 0 Training Loss")
-        plt.legend()
-        plt.grid(True)
-
-        # Plot PPL Comparison
-        plt.subplot(1, 3, 3)
-        labels = ["Before"]
-        values = [results["before"]["ppl"]]
-
-        for method in methods:
-            if method in results:
-                labels.append(f"{method.upper()}")
-                values.append(results[method]["ppl"])
-
-        # Filter None values
-        clean_labels = []
-        clean_values = []
-        for l, v in zip(labels, values):
-            if v is not None:
-                clean_labels.append(l)
-                clean_values.append(v)
-
-        bars = plt.bar(clean_labels, clean_values)
-        plt.ylabel("PPL")
-        plt.title("Perplexity Comparison (Lower is Better)")
-        plt.grid(axis='y')
-
-        # Add labels
-        for bar in bars:
-            height = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{height:.2f}',
-                    ha='center', va='bottom')
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(args.output_dir, "distillation_comparison.png"))
-        print(f"Plot saved to {os.path.join(args.output_dir, 'distillation_comparison.png')}")
-    except Exception as e:
-        print(f"Plotting failed: {e}")
-        import traceback
-        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
-
-"""
-  python scripts/run_distillation_experiment.py \
-      --model_path /home/tgx/models/Llama-3.2-1B \
-      --compare \
-      --steps_per_layer 50 \
-      --output_dir experiment_5_results
-
-"""

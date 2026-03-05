@@ -2,8 +2,19 @@
 __pycache__/
 *.py[cod]
 *.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
 
 .vscode/
+.venv/
+venv/
+env/
+
+.env
+.env.*
+!.env.example
 
 compressed_llama_distilled/
 compressed_llama_distilled_kl/
@@ -17,8 +28,23 @@ lora_mixed/
 *.log
 .DS_Store
 
+# Experiment artifacts
+experiment_*_results/
+experiment_*_results_test/
+experiment_*_results.json
+indices.json
+test_original_ppl.json
+runs/
+events.out.tfevents.*
+
 LongBench/data*
 LongBench/pred*
+LongBench/retrieval/*_pred_*/
+LongBench/retrieval/result_*/
+LongBench/retrieval/**/wikipedia_embeddings/
+LongBench/retrieval/**/mcontriever_output/
 
 build/
-.cache
+.cache/
+data/
+.claude/

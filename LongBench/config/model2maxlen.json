@@ -9,5 +9,8 @@
     "vicuna-v1.5-7b-16k": 15500,
     "llama3-8b-instruct": 3500,
     "llama3-8b-compress": 3500,
-    "llama3-8b-h2o": 3500
+    "llama3-8b-h2o": 3500,
+    "llama-3.2-1B-compress": 3500,
+    "llama-3.2-1B": 3500,
+    "llama-3.2-h2o": 3500
 }

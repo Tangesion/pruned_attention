@@ -7,14 +7,29 @@ from tqdm import tqdm
 import numpy as np
 import random
 import argparse
-from llama_flash_attn_monkey_patch import replace_llama_attn_with_flash_attn
+#from llama_flash_attn_monkey_patch import replace_llama_attn_with_flash_attn
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
+def load_small_state(model, model_name):
+    DISTILLED_DIR = f"./data/{model_name}"
+    small_state = torch.load(f"{DISTILLED_DIR}/small_attn_weights.pt", map_location="cpu")
+    base_state = model.state_dict()
+    for name, param in small_state.items():
+        if name in base_state and base_state[name].shape == param.shape:
+            base_state[name] = param
+    model.load_state_dict(base_state)
+    return model
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-compress", "llama3-8b-h2o"], help="Model name for evaluation")
+    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-compress", "llama3-8b-h2o", "llama-3.2-1B-compress"], help="Model name for evaluation")
     parser.add_argument('--e', action='store_true', help="Evaluate on LongBench-E")
+    # Compression knobs
+    parser.add_argument("--topk-ratio", type=float, default=0.1, help="The ratio of tokens to keep based on top-k attention scores.")
+    parser.add_argument("--sink-size", type=int, default=4)
+    parser.add_argument("--local-window", type=int, default=64)
+    parser.add_argument("--escaped-layers", type=int, nargs="*", default=[], help="List of layer indices to skip compression.")
     return parser.parse_args(args)
 
 # This is the customized building prompt for chat models
@@ -48,9 +63,9 @@ def post_process(response, model_name):
         response = response.split("<eoa>")[0]
     return response
 
-def get_pred(rank, world_size, data, max_length, max_gen, prompt_format, dataset, device, model_name, model2path, out_path):
+def get_pred(rank, world_size, data, max_length, max_gen, prompt_format, dataset, device, model_name, model2path, out_path, args):
     device = torch.device(f'cuda:{rank}')
-    model, tokenizer = load_model_and_tokenizer(model2path[model_name], model_name, device)
+    model, tokenizer = load_model_and_tokenizer(model2path[model_name], model_name, device, args)
     for json_obj in tqdm(data):
         prompt = prompt_format.format(**json_obj)
         # truncate to fit max_length (we suggest truncate in the middle, since the left and right side may contain crucial instructions)
@@ -140,7 +155,12 @@ def seed_everything(seed):
     torch.backends.cudnn.deterministic = True
     torch.cuda.manual_seed_all(seed)
 
-def load_model_and_tokenizer(path, model_name, device):
+def load_model_and_tokenizer(path, model_name, device, args):
+    
+    name_map = {
+        "llama-3.2-1B-compress": "Llama-3.2-1B"
+    }
+    
     if "chatglm" in model_name or "internlm" in model_name or "xgen" in model_name:
         tokenizer = AutoTokenizer.from_pretrained(path, trust_remote_code=True)
         model = AutoModelForCausalLM.from_pretrained(path, trust_remote_code=True, torch_dtype=torch.bfloat16).to(device)
@@ -151,23 +171,31 @@ def load_model_and_tokenizer(path, model_name, device):
     elif "llama3-8b-instruct" in model_name:
         tokenizer = AutoTokenizer.from_pretrained(path)
         model = LlamaForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16).to(device)
-    elif "llama3-8b-compress" in model_name:
+    elif "llama3-8b-compress" in model_name or "llama-3.2-1B-compress" in model_name:
         import sys
         sys.path.append("..")
         from src.pruned_attention.calibration import apply_compression_to_model
         from peft import PeftModel
         tokenizer = AutoTokenizer.from_pretrained(path)
         base_model = LlamaForCausalLM.from_pretrained(path, torch_dtype=torch.bfloat16, attn_implementation="eager").to(device)
-        model = apply_compression_to_model(base_model, indices_path="../indices.json", quant_mode="int")
-        DISTILLED_DIR = "../compressed_llama_distilled_topk_wo_sink"
-        LORA_DIR = "../lora_all_mixed/final_checkpoint"
-        small_state = torch.load(f"{DISTILLED_DIR}/small_attn_weights.pt", map_location="cpu")
-        base_state = base_model.state_dict()
-        for name, param in small_state.items():
-            if name in base_state and base_state[name].shape == param.shape:
-                base_state[name] = param
-        model.load_state_dict(base_state)
+        model = apply_compression_to_model(
+            base_model, 
+            name_map[model_name], 
+            quant_mode="int", 
+            topk_ratio=args.topk_ratio,
+            sink_size=args.sink_size, 
+            local_window=args.local_window, 
+            escaped_layers=args.escaped_layers)
+        #DISTILLED_DIR = "../compressed_llama_distilled_topk_wo_sink"
+        #LORA_DIR = "../lora_all_mixed/final_checkpoint"
+        #small_state = torch.load(f"{DISTILLED_DIR}/small_attn_weights.pt", map_location="cpu")
+        #base_state = base_model.state_dict()
+        #for name, param in small_state.items():
+        #    if name in base_state and base_state[name].shape == param.shape:
+        #        base_state[name] = param
+        #model.load_state_dict(base_state)
         #model = PeftModel.from_pretrained(model, LORA_DIR)
+        model = load_small_state(model, name_map[model_name])
         model.eval()
     elif "llama3-8b-h2o" in model_name:
         import sys
@@ -247,7 +275,7 @@ if __name__ == '__main__':
         processes = []
         for rank in range(world_size):
             p = mp.Process(target=get_pred, args=(rank, world_size, data_subsets[rank], max_length, \
-                        max_gen, prompt_format, dataset, device, model_name, model2path, out_path))
+                        max_gen, prompt_format, dataset, device, model_name, model2path, out_path, args))
             p.start()
             processes.append(p)
         for p in processes:

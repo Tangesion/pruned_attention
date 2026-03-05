@@ -369,7 +369,8 @@ def main():
     print(f"Random Average Recall:             {np.mean(results['random']):.4f}")
 
     # Save results
-    save_path = "experiment_4_results.json"
+    os.makedirs("experiment_pruning_results", exist_ok=True)
+    save_path = os.path.join("experiment_pruning_results", "pruning_results.json")
     import json
     with open(save_path, 'w') as f:
         json.dump(results, f)

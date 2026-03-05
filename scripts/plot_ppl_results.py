@@ -1,84 +1,83 @@
 import json
+from pathlib import Path
+
 import matplotlib.pyplot as plt
-import os
-import glob
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import numpy as np
 
-def plot_ppl_results(results_dir="experiment_ppl_results", output_file="experiment_ppl_results/ppl_comparison.png"):
-    # Map filenames to legend labels
-    label_map = {
-        "original.json": "Full Attention",
-        "compressed.json": "Ours (Compressed)",
-        "h2o.json": "H2O",
-        "sliding_window.json": "Sliding Window"
-    }
+# ---- Load data ----
+json_path = Path("/home/tgx/projects/pruned_attention/experiment_ppl_results/ppl_results.json")
+with open(json_path, "r", encoding="utf-8") as f:
+    data = json.load(f)
 
-    # Colors for each method
-    colors = {
-        "Full Attention": "black",
-        "Ours (Compressed)": "red",
-        "H2O": "blue",
-        "Sliding Window": "green"
-    }
+topk = [float(x) for x in data["config"]["topk_ratios"]]
+results = data["results"]
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+# Method display order
+methods = ["full_attention", "ours_bf16", "ours_int4", "h2o", "slide"]
 
-    # Find all json files
-    json_files = glob.glob(os.path.join(results_dir, "*.json"))
+# Conference-paper-like style
+plt.style.use("seaborn-v0_8-whitegrid")
+plt.rcParams.update({
+    "font.family": "DejaVu Sans",
+    "font.size": 11,
+    "axes.labelsize": 12,
+    "axes.titlesize": 12,
+    "legend.fontsize": 10,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "axes.linewidth": 1.0,
+    "grid.linewidth": 0.8,
+    "grid.alpha": 0.25,
+    "figure.dpi": 200,
+    "savefig.dpi": 300,
+    "pdf.fonttype": 42,   # editable text in PDF
+    "ps.fonttype": 42,
+})
 
-    if not json_files:
-        print(f"No JSON files found in {results_dir}")
-        return
+# Colorblind-friendly palette + line styles
+style_map = {
+    "full_attention": dict(color="#000000", marker="o", linestyle="--", linewidth=2.0, markersize=5, label="Full Attention"),
+    "ours_bf16":      dict(color="#0072B2", marker="s", linestyle="-",  linewidth=2.2, markersize=5, label="Ours (BF16)"),
+    "ours_int4":      dict(color="#009E73", marker="D", linestyle="-",  linewidth=2.2, markersize=5, label="Ours (INT4)"),
+    "h2o":            dict(color="#D55E00", marker="^", linestyle="-.", linewidth=2.0, markersize=5, label="H2O"),
+    "slide":          dict(color="#CC79A7", marker="v", linestyle=":",  linewidth=2.0, markersize=5, label="Slide"),
+}
 
-    for json_file in json_files:
-        basename = os.path.basename(json_file)
-        if basename not in label_map:
-            continue
+fig, ax = plt.subplots(figsize=(6.6, 4.2))
 
-        label = label_map[basename]
+for m in methods:
+    y = [results[m][str(x)] for x in topk]
+    ax.plot(topk, y, **style_map[m])
 
-        with open(json_file, 'r') as f:
-            data = json.load(f)
+# Axes formatting
+ax.set_xlabel("Top-k Ratio")
+ax.set_ylabel("Perplexity (↓)")
+ax.set_title("Perplexity vs. Top-k Ratio")
+ax.set_xticks(topk)
+ax.set_xlim(min(topk) - 0.02, max(topk) + 0.02)
 
-        steps = [d["step"] for d in data if "step" in d and "ppl" in d]
-        ppl = [d["ppl"] for d in data if "step" in d and "ppl" in d]
+# Tight y-range for better readability
+all_vals = []
+for m in methods:
+    all_vals.extend([results[m][str(x)] for x in topk])
+ymin, ymax = min(all_vals), max(all_vals)
+pad = max(0.08 * (ymax - ymin), 0.15)
+ax.set_ylim(ymin - pad, ymax + pad)
 
-        if steps and ppl:
-            ax.plot(steps, ppl, label=label, color=colors.get(label, "gray"), linewidth=2)
+# Legend (inside, top-right)
+leg = ax.legend(loc="upper right", frameon=True, framealpha=0.95)
+leg.get_frame().set_linewidth(0.8)
 
-    ax.set_xlabel("Sequence Length")
-    ax.set_ylabel("Perplexity (PPL)")
-    ax.set_title("PPL vs. Sequence Length on PG19")
-    ax.legend()
-    ax.grid(True, linestyle='--', alpha=0.7)
-    ax.set_yscale("linear")  # PPL often spans orders of magnitude, but linear is fine if close
+# Light spines for paper style
+for spine in ax.spines.values():
+    spine.set_alpha(0.8)
 
-    # Zoomed inset
-    zoom_x_min, zoom_x_max = 3072, 4096
-    zoom_y_min, zoom_y_max = 9.0, 13.0
+fig.tight_layout()
 
-    axins = inset_axes(ax, width="38%", height="38%", loc="lower right", borderpad=1)
-    for json_file in json_files:
-        basename = os.path.basename(json_file)
-        if basename not in label_map:
-            continue
-        label = label_map[basename]
-        with open(json_file, 'r') as f:
-            data = json.load(f)
-        steps = [d["step"] for d in data if "step" in d and "ppl" in d]
-        ppl = [d["ppl"] for d in data if "step" in d and "ppl" in d]
-        if steps and ppl:
-            axins.plot(steps, ppl, color=colors.get(label, "gray"), linewidth=2)
+out_dir = json_path.parent
+png_path = out_dir / "ppl_results_lineplot.png"
+pdf_path = out_dir / "ppl_results_lineplot.pdf"
 
-    axins.set_xlim(zoom_x_min, zoom_x_max)
-    axins.set_ylim(zoom_y_min, zoom_y_max)
-    axins.grid(True, linestyle='--', alpha=0.5)
-    axins.set_xticks([])
-    axins.set_yticks([])
-
-    plt.tight_layout()
-    plt.savefig(output_file, dpi=300)
-    print(f"Plot saved to {output_file}")
-
-if __name__ == "__main__":
-    plot_ppl_results()
+fig.savefig(png_path, bbox_inches="tight")
+fig.savefig(pdf_path, bbox_inches="tight")
+print(f"Saved:\n- {png_path}\n- {pdf_path}")

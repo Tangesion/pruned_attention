@@ -30,53 +30,60 @@ class IndexDataset(Dataset):
 
 
 def get_test_data(name, tokenizer, seq_len=2048, batch_size=4):
-    def process_data(samples, tokenizer, seq_len, field_name):
-        test_ids = tokenizer("\n\n".join(samples[field_name]), return_tensors='pt').input_ids[0]
-        test_ids_batch = []
-        nsamples = test_ids.numel() // seq_len
+    name = name.lower()
 
-        for i in range(nsamples):
-            batch = test_ids[(i * seq_len):((i + 1) * seq_len)]
-            test_ids_batch.append(batch)
-        test_ids_batch = torch.stack(test_ids_batch)
-        return IndexDataset(tensors=test_ids_batch)
+    def chunk_token_ids(token_ids, seq_len):
+        n = token_ids.numel() // seq_len
+        if n == 0:
+            raise ValueError(f"Not enough tokens for seq_len={seq_len}")
+        blocks = [token_ids[i * seq_len:(i + 1) * seq_len] for i in range(n)]
+        return torch.stack(blocks, dim=0)
 
-    def process_wiki103_data(samples, tokenizer, seq_len, field_name):
-        text_list = [item for sublist in samples[field_name] for item in (sublist if isinstance(sublist, list) else [sublist])]
-        text_list = [s for s in text_list if isinstance(s, str) and len(s) > 0]
+    def process_rows_text(rows):
+        # 避免一次性 join 全量文本导致超长 tokenize
+        all_blocks = []
+        for t in rows:
+            if not isinstance(t, str) or len(t) == 0:
+                continue
+            ids = tokenizer(t, return_tensors="pt", truncation=False).input_ids[0]
+            if ids.numel() < seq_len:
+                continue
+            all_blocks.append(chunk_token_ids(ids, seq_len))
+        if len(all_blocks) == 0:
+            raise ValueError(f"No valid text blocks for dataset={name}")
+        stacked = torch.cat(all_blocks, dim=0)
+        return IndexDataset(stacked)
 
-        test_ids = tokenizer("\n\n".join(text_list), return_tensors='pt').input_ids[0]
-        test_ids_batch = []
-        nsamples = test_ids.numel() // seq_len
-
-        for i in range(nsamples):
-            batch = test_ids[(i * seq_len):((i + 1) * seq_len)]
-            test_ids_batch.append(batch)
-        test_ids_batch = torch.stack(test_ids_batch)
-        return IndexDataset(tensors=test_ids_batch)
-
-    if 'wikitext2' in name:
-        test_data = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
-        test_dataset = process_data(test_data, tokenizer, seq_len, 'text')
-    elif 'wikitext103' in name:
-        test_data = load_dataset('yehzw/wikitext-103', 'clean', split='test')
-        test_dataset = process_wiki103_data(test_data, tokenizer, seq_len, 'text')
-    elif 'ptb' in name:
-        test_data = load_dataset('ptb_text_only', 'penn_treebank', split='test')
-        test_dataset = process_data(test_data, tokenizer, seq_len, 'sentence')
-    elif 'c4' in name:
-        test_data = load_dataset("allenai/c4", "en", split="validation")
-        test_dataset = process_data(test_data[0:2000], tokenizer, seq_len, 'text')
-    elif 'lambada' in name:
-        test_data = load_dataset('lambada', split='test')
-        test_dataset = process_data(test_data, tokenizer, seq_len, 'text')
-    elif 'pg19-test' in name:
-        test_data = load_dataset("emozilla/pg19-test", split="test")
-        test_dataset = process_data(test_data, tokenizer, seq_len, 'text')
+    if "wikitext2" in name or name == "wikitext":
+        ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+        dataset = process_rows_text(ds["text"])
+    elif "wikitext103" in name:
+        ds = load_dataset("yehzw/wikitext-103", "clean", split="test")
+        # 兼容 list[str] / str
+        rows = []
+        for x in ds["text"]:
+            if isinstance(x, list):
+                rows.extend([s for s in x if isinstance(s, str)])
+            elif isinstance(x, str):
+                rows.append(x)
+        dataset = process_rows_text(rows)
+    elif "ptb" in name:
+        ds = load_dataset("allenai/ptb_text_only", "penn_treebank", split="test")
+        dataset = process_rows_text(ds["sentence"])
+    elif "lambada" in name:
+        ds = load_dataset("lambada", split="test")
+        dataset = process_rows_text(ds["text"])
+    elif "pg19" in name:
+        ds = load_dataset("emozilla/pg19-test", split="test")
+        dataset = process_rows_text(ds["text"])
+    elif "c4" in name:
+        # C4 容易网络失败；只取少量样本并做兜底
+        ds = load_dataset("allenai/c4", "en", split="validation[:1%]")
+        dataset = process_rows_text(ds["text"])
     else:
         raise ValueError(f"Unsupported dataset: {name}")
 
-    return DataLoader(test_dataset, batch_size=batch_size, shuffle=False), test_data
+    return DataLoader(dataset, batch_size=batch_size, shuffle=False), ds
 
 
 # -----------------------------
@@ -86,7 +93,7 @@ def get_test_data(name, tokenizer, seq_len=2048, batch_size=4):
 def ppl_eval(model, tokenizer, test_loader=None, dataset='wikitext2', model_seq_len=2048, batch_size=32, device="cuda"):
     model.eval()
     if test_loader is None:
-        test_loader = get_test_data(dataset, tokenizer, seq_len=model_seq_len, batch_size=batch_size)
+        test_loader, _ = get_test_data(dataset, tokenizer, seq_len=model_seq_len, batch_size=batch_size)
 
     nlls = []
     loss_fct = torch.nn.CrossEntropyLoss(reduction="none")

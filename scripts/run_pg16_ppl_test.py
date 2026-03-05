@@ -17,76 +17,133 @@ from src.slide_attention.attention import convert_kvcache_llama_sliding_window
 from src.pruned_attention.attention import KVWithSmallKCache
 
 
-torch.no_grad()
+import os
+import json
+import torch
+from datasets import load_dataset
+
+def _dataset_rows(dataset_name: str):
+    n = dataset_name.lower()
+    if n in ["wikitext", "wikitext2"]:
+        ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+        return ds["text"]
+    if n == "wikitext103":
+        ds = load_dataset("yehzw/wikitext-103", "clean", split="test")
+        rows = []
+        for x in ds["text"]:
+            if isinstance(x, list):
+                rows.extend([s for s in x if isinstance(s, str)])
+            elif isinstance(x, str):
+                rows.append(x)
+        return rows
+    if n == "ptb":
+        ds = load_dataset("ptb_text_only", "penn_treebank", split="test")
+        return ds["sentence"]
+    if n == "lambada":
+        ds = load_dataset("lambada", split="test")
+        return ds["text"]
+    if n in ["pg19", "pg19-test"]:
+        ds = load_dataset("emozilla/pg19-test", split="test")
+        return ds["text"]
+    if n == "c4":
+        # 小切片，避免拉全量
+        ds = load_dataset(
+            "json",
+            data_files="https://huggingface.co/datasets/allenai/c4/resolve/main/en/c4-validation.00000-of-00008.json.gz",
+            split="train[:200]",
+        )
+        return ds["text"]
+    raise ValueError(f"Unsupported dataset: {dataset_name}")
+
+@torch.no_grad()
 def ppl_eval_parallel(model, tokenizer, args=None):
-    """
-    Parallel PPL (shifted logits/labels), equivalent to token-by-token CE in expectation
-    for a causal LM under the same context.
-    """
     device = args.device if args else "cuda"
-    data = load_dataset("emozilla/pg19-test", split="test")
+    dataset_name = getattr(args, "dataset", "pg19-test")
+    num_eval_tokens = getattr(args, "num_eval_tokens", 1024)
+    log_interval = max(1, int(getattr(args, "log_interval", 64)))
+    output_file = getattr(args, "output_file", None)
 
-    loss_fn = torch.nn.CrossEntropyLoss(reduction="none")
-    nlls = []
-
-    # Make sure we're in eval mode (no dropout)
+    target = int(num_eval_tokens) if num_eval_tokens is not None else None
+    rows = _dataset_rows(dataset_name)
     model.eval()
+    loss_fn = torch.nn.CrossEntropyLoss(reduction="none")
 
-    # Evaluate only first sample (same as your original code)
-    for text in data["text"][:1]:
-        encodings = tokenizer(text, return_tensors="pt")
-        input_ids = encodings.input_ids.to(device)  # [1, T]
+    nll_chunks = []
+    used = 0
+    
+    is_ptb = dataset_name.lower() == "ptb"
+    carry_text = ""
+    min_chars_for_ptb = 2048 
 
-        seq_len = input_ids.size(1)
+    for t in rows:
+        if not isinstance(t, str) or len(t.strip()) == 0:
+            continue
+        
+        text_to_eval = t.strip()
 
-        # To match your token loop which runs idx=0..(seq_len-2),
-        # we compute loss on positions 1..(T-1) predicted by logits 0..(T-2).
-        # Also respect args.num_eval_tokens (number of prediction steps).
-        if args is not None and args.num_eval_tokens is not None:
-            # num_eval_tokens refers to number of next-token predictions
-            # so we need input length = num_eval_tokens + 1
-            max_len = min(seq_len, args.num_eval_tokens + 1)
-            input_ids = input_ids[:, :max_len]
+        if is_ptb:
+            # 累积到足够长度再评估，避免单句过短
+            carry_text = (carry_text + " " + text_to_eval).strip()
+            if len(carry_text) < min_chars_for_ptb:
+                continue
+            text_to_eval = carry_text
+            carry_text = ""
 
-        # Single forward, no cache
-        outputs = model(input_ids=input_ids, use_cache=False)
-        logits = outputs.logits  # [1, T, vocab]
+        ids = tokenizer(text_to_eval, return_tensors="pt", truncation=False).input_ids.to(device)  # [1, T]
+        
+        #ids = tokenizer(t, return_tensors="pt", truncation=False).input_ids.to(device)  # [1, T]
+        if ids.size(1) < 2:
+            continue
 
-        # Shift for next-token prediction
-        shift_logits = logits[:, :-1, :].contiguous()  # [1, T-1, vocab]
-        shift_labels = input_ids[:, 1:].contiguous()   # [1, T-1]
+        # 截断到剩余预算（token 预测步数 = length-1）
+        if target is not None:
+            remain = target - used
+            if remain <= 0:
+                break
+            max_len = min(ids.size(1), remain + 1)
+            ids = ids[:, :max_len]
+            if ids.size(1) < 2:
+                continue
 
-        # Per-token NLL
+        out = model(input_ids=ids, use_cache=False)
+        logits = out.logits
+        shift_logits = logits[:, :-1, :].contiguous()
+        shift_labels = ids[:, 1:].contiguous()
+
         token_nll = loss_fn(
             shift_logits.view(-1, shift_logits.size(-1)),
             shift_labels.view(-1),
-        )  # [(T-1)]
+        )
 
-        if args.output_file:
-            # Calculate cumulative PPL
-            cum_loss = torch.cumsum(token_nll, dim=0)
-            count = torch.arange(1, token_nll.size(0) + 1, device=token_nll.device)
-            cum_ppl = torch.exp(cum_loss / count)
+        if token_nll.numel() == 0:
+            continue
 
-            # Subsample for logging
-            indices = torch.arange(args.log_interval - 1, token_nll.size(0), args.log_interval)
-            if indices.numel() == 0 or indices[-1] != token_nll.size(0) - 1:
-                # Ensure last point is included if possible/desired, or just rely on interval
-                pass
+        nll_chunks.append(token_nll.detach().cpu())
+        used += token_nll.numel()
 
-            logged_steps = (indices + 1).tolist()
-            logged_ppls = cum_ppl[indices].tolist()
+        if target is not None and used >= target:
+            break
 
-            rows = [{"step": s, "ppl": p} for s, p in zip(logged_steps, logged_ppls)]
+    if len(nll_chunks) == 0:
+        raise ValueError(f"No valid token_nll for dataset={dataset_name}")
 
-            with open(args.output_file, 'w') as f:
-                json.dump(rows, f, indent=4)
-            print(f"Saved PPL results to {args.output_file}")
+    all_nll = torch.cat(nll_chunks, dim=0)
+    ppl = float(torch.exp(all_nll.mean()).item())
 
-        nlls.append(token_nll)
+    if output_file:
+        cum_loss = torch.cumsum(all_nll, dim=0)
+        cnt = torch.arange(1, all_nll.size(0) + 1)
+        cum_ppl = torch.exp(cum_loss / cnt)
 
-    mean_nll = torch.cat(nlls, dim=0).mean()
-    ppl = torch.exp(mean_nll).item()
+        idx = torch.arange(log_interval - 1, all_nll.size(0), log_interval)
+        if idx.numel() == 0 or idx[-1].item() != all_nll.size(0) - 1:
+            idx = torch.cat([idx, torch.tensor([all_nll.size(0) - 1])])
+
+        curve = [{"step": int(i.item() + 1), "ppl": float(cum_ppl[i].item())} for i in idx]
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        with open(output_file, "w") as f:
+            json.dump(curve, f, indent=2)
+
     return ppl
 
 @torch.no_grad()
@@ -334,3 +391,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+"""
+python scripts/run_pg16_ppl_test.py \                                                                                              ─╯
+      --base-model /home/tgx/models/Llama-3.2-1B \
+      --eval-all \
+      --topk-ratios 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 \
+      --num-eval-tokens 1024 \
+      --sink-size 4 --local-window 16 \
+      --escaped-layers 0 1 14 15 \
+      --output-dir ./experiment_ppl_results
+
+"""
