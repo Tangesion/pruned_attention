@@ -1,3 +1,5 @@
+import os
+print("HF_ENDPOINT =", os.getenv("HF_ENDPOINT"))
 import torch
 from transformers import AutoTokenizer, LlamaForCausalLM
 import argparse
@@ -61,7 +63,6 @@ def main():
         tokenizer, 
         n_samples=args.num_samples, 
         seq_len=args.seq_len,
-        use_modelscope=args.use_modelscope
     )
     
     model_name = os.path.basename(args.model_path)

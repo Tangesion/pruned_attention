@@ -242,8 +242,8 @@ of
 
 def get_c4_simple(tokenizer, n_samples, seq_len):
     ds_dict = load_dataset(
-        "allenai/c4",
-        data_files={"train": "en/c4-train.00000-of-01024.json.gz"}
+        "json",
+        data_files={"train": "/home/tgx/data/cache/datasets/c4/c4-train.00000-of-01024.json.gz"}
     )
     ds = ds_dict["train"]
     n_items = len(ds)

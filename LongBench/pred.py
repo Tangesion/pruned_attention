@@ -23,7 +23,7 @@ def load_small_state(model, model_name):
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-compress", "llama3-8b-h2o", "llama-3.2-1B-compress"], help="Model name for evaluation")
+    parser.add_argument('--model', type=str, default=None, choices=["llama2-7b-chat-4k", "longchat-v1.5-7b-32k", "xgen-7b-8k", "internlm-7b-8k", "chatglm2-6b", "chatglm2-6b-32k", "chatglm3-6b-32k", "vicuna-v1.5-7b-16k", "llama3-8b-instruct", "llama3-8b-slide", "llama3-8b-compress", "llama3-8b-h2o", "llama-3.2-1B-compress"], help="Model name for evaluation")
     parser.add_argument('--e', action='store_true', help="Evaluate on LongBench-E")
     # Compression knobs
     parser.add_argument("--topk-ratio", type=float, default=0.1, help="The ratio of tokens to keep based on top-k attention scores.")
