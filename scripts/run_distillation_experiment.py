@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 import argparse
 import os
 import sys
@@ -7,14 +6,19 @@ import json
 from tqdm import tqdm
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import AutoTokenizer, LlamaForCausalLM
-from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
 
 # Add project root to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.pruned_attention.calibration import get_c4_simple, apply_compression_to_model
-from src.pruned_attention.attention import CompressedLlamaAttention, repeat_kv
-from src.pruned_attention.distillation import CompressedLlamaAttentionTopKDistillWrapper, _get_layer_inputs
+from src.pruned_attention.attention import CompressedLlamaAttention
+from src.pruned_attention.distillation import (
+    _get_layer_inputs,
+    build_distill_wrapper,
+    compute_topk_recall,
+    slice_attention_mask,
+    slice_position_embeddings,
+)
 
 # 优先使用并行PPL评估
 try:
@@ -27,66 +31,36 @@ except ImportError:
         def ppl_eval_parallel(model, tokenizer, args=None):
             return None
 
+@torch.no_grad()
+def evaluate_layer_recall(distill_wrapper, hidden_states, position_embeddings, attention_mask, batch_size, topk_ratio, device):
+    layer_dataset = TensorDataset(hidden_states)
+    recall_loader = DataLoader(layer_dataset, batch_size=batch_size, shuffle=False)
 
-class CompressedLlamaAttentionMSEDistillWrapper(nn.Module):
-    def __init__(self, compressed_layer, original_layer_config):
-        super().__init__()
-        self.layer = compressed_layer
-        self.config = original_layer_config
-        self.head_dim = self.layer.head_dim
-        self.scaling = self.head_dim ** -0.5
-        self.num_key_value_groups = self.layer.num_key_value_groups
+    was_training = distill_wrapper.training
+    distill_wrapper.eval()
 
-        for p in self.layer.parameters():
-            p.requires_grad = False
+    matched_sum = 0.0
+    total_sum = 0.0
+    for (batch_hidden,) in recall_loader:
+        batch_hidden = batch_hidden.to(device)
+        batch_pos_emb = slice_position_embeddings(position_embeddings, batch_hidden.shape[1])
+        batch_attn_mask = slice_attention_mask(attention_mask, batch_hidden.shape[1])
 
-        self.layer.q_proj_small.weight = nn.Parameter(self.layer.q_proj_small.weight)
-        self.layer.k_proj_small.weight = nn.Parameter(self.layer.k_proj_small.weight)
-        self.layer.q_proj_small.weight.requires_grad = True
-        self.layer.k_proj_small.weight.requires_grad = True
+        _, student_scores, teacher_scores = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
+        matched, total = compute_topk_recall(
+            student_scores,
+            teacher_scores,
+            topk_ratio=topk_ratio,
+            attention_mask=batch_attn_mask,
+            return_counts=True,
+        )
+        matched_sum += matched
+        total_sum += total
 
-        self.loss_fct = nn.MSELoss()
+    if was_training:
+        distill_wrapper.train()
 
-    def forward(self, hidden_states, position_embeddings, attention_mask=None):
-        bsz, q_len, _ = hidden_states.shape
-
-        with torch.no_grad():
-            q_full = self.layer.q_proj(hidden_states).view(bsz, q_len, self.layer.num_q_heads, self.head_dim).transpose(1, 2)
-            k_full = self.layer.k_proj(hidden_states).view(bsz, q_len, self.layer.num_kv_heads, self.head_dim).transpose(1, 2)
-            cos, sin = position_embeddings
-            q_full, k_full = apply_rotary_pos_emb(q_full, k_full, cos, sin)
-            k_full = repeat_kv(k_full, self.num_key_value_groups)
-            teacher_scores = torch.matmul(q_full, k_full.transpose(2, 3)) * self.scaling
-            if attention_mask is not None:
-                teacher_scores = teacher_scores + attention_mask
-
-        q_small = self.layer.q_proj_small(hidden_states).view(
-            bsz, q_len, self.layer.num_q_heads, self.layer.compressed_dim
-        ).transpose(1, 2)
-        k_small = self.layer.k_proj_small(hidden_states).view(
-            bsz, q_len, self.layer.num_kv_heads, self.layer.compressed_dim
-        ).transpose(1, 2)
-        q_small, k_small = self.layer.apply_mixed_index_rope(q_small, k_small, position_embeddings)
-        k_small = repeat_kv(k_small, self.num_key_value_groups)
-        student_scores = torch.matmul(q_small, k_small.transpose(2, 3)) * (self.layer.compressed_dim ** -0.5)
-        if attention_mask is not None:
-            student_scores = student_scores + attention_mask
-
-        if attention_mask is not None:
-            valid_mask = (attention_mask > -1000).expand_as(student_scores)
-            return self.loss_fct(student_scores[valid_mask], teacher_scores[valid_mask]), student_scores, teacher_scores
-        return self.loss_fct(student_scores, teacher_scores), student_scores, teacher_scores
-
-
-def cal_recall(student_scores, teacher_scores, topk_ratio=0.1):
-    with torch.no_grad():
-        _, _, _, kv_len = teacher_scores.shape
-        k_val = max(1, int(kv_len * topk_ratio))
-        _, indices_true = torch.topk(teacher_scores, k=k_val, dim=-1)
-        _, indices_pred = torch.topk(student_scores, k=k_val, dim=-1)
-        matches = (indices_true.unsqueeze(-1) == indices_pred.unsqueeze(-2)).any(dim=-1).sum()
-        total_k = indices_true.numel()
-        return (matches.float() / total_k).item()
+    return matched_sum / max(total_sum, 1.0)
 
 
 def collect_layer_wise_distillation(
@@ -99,6 +73,13 @@ def collect_layer_wise_distillation(
     lr=1e-3,
     seq_len=128,
     num_calibration_samples=128,
+    topk_ratio=0.2,
+    ranking_margin=1.0,
+    max_pairs_per_query=8,
+    ranking_temperature=0.5,
+    teacher_boundary_ratio=1.0,
+    student_hard_negative_ratio=0.0,
+    hybrid_alpha=0.25,
 ):
     device = model.device
     loss_history = {i: [] for i in range(model.config.num_hidden_layers)}
@@ -118,7 +99,7 @@ def collect_layer_wise_distillation(
     with open(indices_path, "r") as f:
         indices_data = json.load(f)
 
-    model.config.topk_ratio = 0.2
+    model.config.topk_ratio = topk_ratio
     model.config.sink_size = 0
     model.config.local_window = 0
     model.config.escaped_layers = []
@@ -134,10 +115,16 @@ def collect_layer_wise_distillation(
             group_keep_indices=keep_indices,
         ).to(device)
 
-        if loss_func == "mse":
-            distill_wrapper = CompressedLlamaAttentionMSEDistillWrapper(compressed_attn, model.config).to(device)
-        else:
-            distill_wrapper = CompressedLlamaAttentionTopKDistillWrapper(compressed_attn, model.config).to(device)
+        distill_wrapper = build_distill_wrapper(
+            loss_func,
+            compressed_attn,
+            model.config,
+            ranking_margin=ranking_margin,
+            max_pairs_per_query=max_pairs_per_query,
+            ranking_temperature=ranking_temperature,
+            teacher_boundary_ratio=teacher_boundary_ratio,
+            student_hard_negative_ratio=student_hard_negative_ratio,
+        ).to(device)
 
         optimizer = torch.optim.AdamW(distill_wrapper.parameters(), lr=lr)
         layer_dataset = TensorDataset(hidden_states)
@@ -148,11 +135,12 @@ def collect_layer_wise_distillation(
         while step < train_steps_per_layer:
             for (batch_hidden,) in layer_loader:
                 batch_hidden = batch_hidden.to(device)
-                cos, sin = position_embeddings
-                batch_pos_emb = (cos[:, :batch_hidden.shape[1]], sin[:, :batch_hidden.shape[1]])
-                batch_attn_mask = attention_mask[:, :, :batch_hidden.shape[1], :batch_hidden.shape[1]]
+                batch_pos_emb = slice_position_embeddings(position_embeddings, batch_hidden.shape[1])
+                batch_attn_mask = slice_attention_mask(attention_mask, batch_hidden.shape[1])
 
-                loss, student_scores, teacher_scores = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
+                loss, _, _ = distill_wrapper(batch_hidden, batch_pos_emb, batch_attn_mask)
+                if not torch.isfinite(loss):
+                    raise RuntimeError(f"Non-finite distillation loss at layer {i}, step {step}: {loss.item()}")
                 loss.backward()
                 loss_history[i].append(loss.item())
 
@@ -164,14 +152,19 @@ def collect_layer_wise_distillation(
                 pbar.set_description(f"Loss: {loss.item():.4f}")
                 pbar.update(1)
 
-                if step == train_steps_per_layer - 1:
-                    recall_history[i] = cal_recall(
-                        student_scores, teacher_scores, topk_ratio=model.config.topk_ratio
-                    )
-
                 if step >= train_steps_per_layer:
                     break
         pbar.close()
+
+        recall_history[i] = evaluate_layer_recall(
+            distill_wrapper,
+            hidden_states,
+            position_embeddings,
+            attention_mask,
+            batch_size=batch_size,
+            topk_ratio=model.config.topk_ratio,
+            device=device,
+        )
 
         model.model.layers[i].self_attn = compressed_attn
 
@@ -182,9 +175,8 @@ def collect_layer_wise_distillation(
         with torch.no_grad():
             for (batch_hidden,) in tqdm(gen_loader, desc="Forwarding"):
                 batch_hidden = batch_hidden.to(device)
-                cos, sin = position_embeddings
-                batch_pos_emb = (cos[:, :batch_hidden.shape[1]], sin[:, :batch_hidden.shape[1]])
-                batch_attn_mask = attention_mask[:, :, :batch_hidden.shape[1], :batch_hidden.shape[1]]
+                batch_pos_emb = slice_position_embeddings(position_embeddings, batch_hidden.shape[1])
+                batch_attn_mask = slice_attention_mask(attention_mask, batch_hidden.shape[1])
                 layer_output = model.model.layers[i](
                     batch_hidden,
                     attention_mask=batch_attn_mask,
@@ -280,6 +272,14 @@ def main():
     parser.add_argument("--steps_per_layer", type=int, default=50)
     parser.add_argument("--compare", action="store_true")
     parser.add_argument("--method", type=str, default="topk", choices=["mse", "topk"])
+    parser.add_argument("--distill_batch_size", type=int, default=4)
+    parser.add_argument("--distill_lr", type=float, default=1e-3)
+    parser.add_argument("--distill_topk_ratio", type=float, default=0.2)
+    parser.add_argument("--ranking_margin", type=float, default=1.0)
+    parser.add_argument("--max_pairs_per_query", type=int, default=8)
+    parser.add_argument("--ranking_temperature", type=float, default=0.5)
+    parser.add_argument("--teacher_boundary_ratio", type=float, default=1.0)
+    parser.add_argument("--student_hard_negative_ratio", type=float, default=0.0)
 
     parser.add_argument("--num_eval_tokens", type=int, default=1024)
     parser.add_argument("--log_interval", type=int, default=64)
@@ -337,7 +337,13 @@ def main():
         args.model_path, dtype=torch.bfloat16, device_map="auto", attn_implementation="eager"
     )
     baseline_model = apply_compression_to_model(
-        baseline_model, model_name, quant_mode="int", topk_ratio=0.2, sink_size=0, local_window=0, escaped_layers=[]
+        baseline_model,
+        model_name,
+        quant_mode=None,
+        topk_ratio=args.distill_topk_ratio,
+        sink_size=0,
+        local_window=0,
+        escaped_layers=[],
     )
 
     before_multi = run_ppl_multidataset(
@@ -360,7 +366,10 @@ def main():
     del baseline_model
     torch.cuda.empty_cache()
 
-    methods = ["mse", "topk"] if args.compare else [args.method]
+    if args.compare:
+        methods = ["mse", "topk"]
+    else:
+        methods = [args.method]
     for method in methods:
         print(f"Running {method.upper()} distillation...")
         model = LlamaForCausalLM.from_pretrained(
@@ -372,8 +381,16 @@ def main():
             loss_func=method,
             tokenizer=tokenizer,
             train_steps_per_layer=args.steps_per_layer,
+            batch_size=args.distill_batch_size,
+            lr=args.distill_lr,
             num_calibration_samples=args.num_samples,
             seq_len=args.seq_len,
+            topk_ratio=args.distill_topk_ratio,
+            ranking_margin=args.ranking_margin,
+            max_pairs_per_query=args.max_pairs_per_query,
+            ranking_temperature=args.ranking_temperature,
+            teacher_boundary_ratio=args.teacher_boundary_ratio,
+            student_hard_negative_ratio=args.student_hard_negative_ratio,
         )
 
         method_multi = run_ppl_multidataset(

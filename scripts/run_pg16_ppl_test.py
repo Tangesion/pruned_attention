@@ -106,7 +106,7 @@ def ppl_eval_parallel(model, tokenizer, args=None):
                 continue
 
         out = model(input_ids=ids, use_cache=False)
-        logits = out.logits
+        logits = out.logits.float()
         shift_logits = logits[:, :-1, :].contiguous()
         shift_labels = ids[:, 1:].contiguous()
 
@@ -118,7 +118,7 @@ def ppl_eval_parallel(model, tokenizer, args=None):
         if token_nll.numel() == 0:
             continue
 
-        nll_chunks.append(token_nll.detach().cpu())
+        nll_chunks.append(token_nll.float().detach().cpu())
         used += token_nll.numel()
 
         if target is not None and used >= target:
@@ -152,18 +152,37 @@ def ppl_eval(model, tokenizer, args, use_kv_cache=False):
     Token-by-token PPL evaluation with optional KV cache.
     """
     device = args.device if args else "cuda"
-    data = load_dataset("emozilla/pg19-test", split="test")
+    dataset_name = getattr(args, "dataset", "pg19-test")
+    rows = _dataset_rows(dataset_name)
     nlls = []
     loss_fn = torch.nn.CrossEntropyLoss(reduction="none")
-
-    past_key_values = KVWithSmallKCache(config=model.config) if use_kv_cache else None
     current_num_eval_tokens = 0
+    is_ptb = dataset_name.lower() == "ptb"
+    carry_text = ""
+    min_chars_for_ptb = 2048
+    docs_used = 0
 
-    for text in data["text"][:1]:
-        encodings = tokenizer(text, return_tensors="pt")
+    for text in rows:
+        if not isinstance(text, str) or len(text.strip()) == 0:
+            continue
+
+        text_to_eval = text.strip()
+        if is_ptb:
+            # PTB rows are often short sentences; concatenate a chunk before streaming eval.
+            carry_text = (carry_text + " " + text_to_eval).strip()
+            if len(carry_text) < min_chars_for_ptb:
+                continue
+            text_to_eval = carry_text
+            carry_text = ""
+
+        encodings = tokenizer(text_to_eval, return_tensors="pt", truncation=False)
         seq_len = encodings.input_ids.size(1)
-        print(f"seq_len: {seq_len}")
-        pbar = tqdm(range(0, seq_len - 1))
+        if seq_len < 2:
+            continue
+
+        docs_used += 1
+        past_key_values = KVWithSmallKCache(config=model.config) if use_kv_cache else None
+        pbar = tqdm(range(0, seq_len - 1), leave=False, desc=f"doc={docs_used} seq_len={seq_len}")
 
         for idx in pbar:
             input_ids = encodings.input_ids[:, idx : idx + 1].to(device)
@@ -172,20 +191,24 @@ def ppl_eval(model, tokenizer, args, use_kv_cache=False):
                 past_key_values=past_key_values,
                 use_cache=True,
             )
-            logits = outputs.logits.view(-1, model.config.vocab_size)
+            logits = outputs.logits.float().view(-1, model.config.vocab_size)
             past_key_values = outputs.past_key_values
             label = encodings.input_ids[:, idx + 1 : idx + 2].to(logits.device).view(-1)
-            neg_log_likelihood = loss_fn(logits, label)
+            neg_log_likelihood = loss_fn(logits, label).float()
 
             nlls.append(neg_log_likelihood)
             pbar.set_description(
-                f"nll: {neg_log_likelihood.item():.2f}, ppl: {torch.exp(neg_log_likelihood).item():.2f}"
+                f"doc={docs_used} nll={neg_log_likelihood.item():.2f} ppl={torch.exp(neg_log_likelihood).item():.2f}"
             )
             current_num_eval_tokens += 1
             if args.num_eval_tokens is not None and current_num_eval_tokens >= args.num_eval_tokens:
                 break
+
         if args.num_eval_tokens is not None and current_num_eval_tokens >= args.num_eval_tokens:
             break
+
+    if len(nlls) == 0:
+        raise ValueError(f"No valid tokens found for dataset={dataset_name}")
 
     ppl = torch.exp(torch.stack(nlls).mean()).item()
     return ppl
@@ -201,6 +224,9 @@ def parse_args():
     p.add_argument("--attn-impl", type=str, default="eager", choices=["eager", "sdpa", "flash_attention_2"], help="HF attention implementation.")
 
     p.add_argument("--device", type=str, default="cuda")
+    p.add_argument("--dataset", type=str, default="pg19-test",
+                   choices=["wikitext", "wikitext2", "wikitext103", "ptb", "lambada", "pg19", "pg19-test", "c4"],
+                   help="Dataset used for PPL evaluation.")
 
     # Compression knobs
     p.add_argument("--topk-ratios", type=float, nargs="+", default=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
@@ -225,12 +251,20 @@ def parse_args():
 
 def load_small_state(model, model_name):
     DISTILLED_DIR = f"./data/{model_name}"
-    small_state = torch.load(f"{DISTILLED_DIR}/small_attn_weights.pt", map_location="cpu")
+    small_state_path = f"{DISTILLED_DIR}/small_attn_weights.pt"
+    if not os.path.exists(small_state_path):
+        raise FileNotFoundError(f"small_attn_weights.pt not found: {small_state_path}")
+    small_state = torch.load(small_state_path, map_location="cpu")
     base_state = model.state_dict()
+    matched = 0
     for name, param in small_state.items():
         if name in base_state and base_state[name].shape == param.shape:
             base_state[name] = param
+            matched += 1
     model.load_state_dict(base_state)
+    print(f"Loaded small-state tensors: {matched}/{len(small_state)} matched from {small_state_path}")
+    if matched == 0:
+        raise RuntimeError(f"No tensors from {small_state_path} matched the current model state_dict.")
     return model
 
 
@@ -367,6 +401,7 @@ def main():
         json.dump({
             "config": {
                 "model": args.base_model,
+                "dataset": args.dataset,
                 "num_eval_tokens": args.num_eval_tokens,
                 "sink_size": args.sink_size,
                 "local_window": args.local_window,
@@ -381,11 +416,14 @@ def main():
     print("\n" + "="*70)
     print("Summary: PPL vs TopK Ratio")
     print("="*70)
-    header = "Method".ljust(20) + "".join([f"{r:.1f}".center(10) for r in args.topk_ratios])
+    col_width = 12
+    header = "Method".ljust(20) + "".join([f"{r:.1f}".center(col_width) for r in args.topk_ratios])
     print(header)
     print("-"*70)
     for method, ppls in results.items():
-        row = method.ljust(20) + "".join([f"{ppls.get(r, '-'):.2f}".center(10) if isinstance(ppls.get(r), float) else "-".center(10) for r in args.topk_ratios])
+        row = method.ljust(20) + "".join(
+            [f"{ppls.get(r, '-'):.4f}".center(col_width) if isinstance(ppls.get(r), float) else "-".center(col_width) for r in args.topk_ratios]
+        )
         print(row)
 
 

@@ -25,7 +25,20 @@ def main():
     parser.add_argument("--train_steps", type=int, default=300, help="Number of training steps per layer.")
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size for distillation.")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate for the optimizer.")
+    parser.add_argument("--method", type=str, default="topk", choices=["mse", "topk"], help="Distillation loss.")
+    parser.add_argument("--distill_topk_ratio", type=float, default=0.2, help="Teacher top-k ratio.")
+    parser.add_argument("--max_pairs_per_query", type=int, default=8, help="Boundary pairs kept per query.")
+    parser.add_argument("--ranking_margin", type=float, default=1.0, help="Compatibility arg; unused by current topk loss.")
+    parser.add_argument("--ranking_temperature", type=float, default=0.5, help="Temperature for pairwise logistic ranking.")
+    parser.add_argument("--teacher_boundary_ratio", type=float, default=1.5, help="Width of the teacher boundary band.")
+    parser.add_argument("--student_hard_negative_ratio", type=float, default=0.0, help="Extra student-hard negatives mixed into boundary negatives.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for calibration sampling and training order.")
     args = parser.parse_args()
+
+    torch.manual_seed(args.seed)
+    random.seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     print(f"Loading model: {args.model_path}")
     # We must use our own LlamaForCausalLM implementation to ensure the custom
@@ -39,11 +52,13 @@ def main():
         attn_implementation="eager"
     )
     tokenizer = AutoTokenizer.from_pretrained(args.model_path)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
     
     indices_path = f"data/{os.path.basename(args.model_path)}/indices.json"
 
     if not os.path.exists(indices_path):
-        print(f"Error: Indices file not found at {args.indices_path}. Please run calibration first.")
+        print(f"Error: Indices file not found at {indices_path}. Please run calibration first.")
         return
 
     print("Starting Layer-wise Distillation...")
@@ -55,7 +70,14 @@ def main():
         batch_size=args.batch_size,
         lr=args.lr,
         seq_len=args.seq_len,
-        num_calibration_samples=args.num_samples
+        num_calibration_samples=args.num_samples,
+        loss_func=args.method,
+        topk_ratio=args.distill_topk_ratio,
+        ranking_margin=args.ranking_margin,
+        max_pairs_per_query=args.max_pairs_per_query,
+        ranking_temperature=args.ranking_temperature,
+        teacher_boundary_ratio=args.teacher_boundary_ratio,
+        student_hard_negative_ratio=args.student_hard_negative_ratio,
     )
     
     save_path = "data/" + os.path.basename(args.model_path)
@@ -74,6 +96,4 @@ def main():
     print("Done!")
 
 if __name__ == "__main__":
-    torch.manual_seed(42)
-    random.seed(42)
     main()

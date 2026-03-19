@@ -126,15 +126,15 @@ def save_fig(fig, output_dir, stem):
 
 def plot_31_convergence(results, output_dir, en_font, normalize_loss=True):
     _set_style(en_font)
-    c_mse = "#D55E00"
-    c_rank = "#0072B2"
+    method_colors = {"mse": "#D55E00", "topk": "#0072B2"}
 
     fig, ax = plt.subplots(figsize=(6.8, 4.2))
 
     debug_info = {}
-    for m, c in [("mse", c_mse), ("topk", c_rank)]:
+    for m in ["mse", "topk"]:
         if m not in results:
             continue
+        c = method_colors[m]
         loss_d = results[m].get("loss", {})
         series = _collect_loss_series(loss_d)
         if len(series) == 0:
@@ -175,8 +175,10 @@ def plot_31_convergence(results, output_dir, en_font, normalize_loss=True):
 def plot_32_recall(results, output_dir, en_font):
     _set_style(en_font)
     c_before = "#7f7f7f"
-    c_mse = "#D55E00"
-    c_rank = "#0072B2"
+    method_styles = {
+        "mse": dict(color="#D55E00", marker="s", linewidth=2.0),
+        "topk": dict(color="#0072B2", marker="o", linewidth=2.2),
+    }
 
     fig, ax = plt.subplots(figsize=(6.8, 4.2))
 
@@ -201,15 +203,21 @@ def plot_32_recall(results, output_dir, en_font):
                 label="Before Distillation",
             )
 
-        if "mse" in results:
-            d = results["mse"].get("recall", {})
+        for method in ["mse", "topk"]:
+            if method not in results:
+                continue
+            d = results[method].get("recall", {})
             y = [get_key(d, i, np.nan) for i in layers]
-            ax.plot(x, y, color=c_mse, marker="s", linewidth=2.0, markersize=4.5, label=method_label("mse"))
-
-        if "topk" in results:
-            d = results["topk"].get("recall", {})
-            y = [get_key(d, i, np.nan) for i in layers]
-            ax.plot(x, y, color=c_rank, marker="o", linewidth=2.2, markersize=4.5, label=method_label("topk"))
+            style = method_styles[method]
+            ax.plot(
+                x,
+                y,
+                color=style["color"],
+                marker=style["marker"],
+                linewidth=style["linewidth"],
+                markersize=4.5,
+                label=method_label(method),
+            )
 
         ax.set_xlabel("Layer Index")
         ax.set_ylabel("Top-k Recall")
