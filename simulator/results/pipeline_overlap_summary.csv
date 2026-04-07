@@ -1,0 +1,5 @@
+label,num_channels,context_length,sparsity_ratio,num_head_groups,heads_per_group,selected_kv_per_group,total_cycles,serial_cycles,overlap_speedup,bubble_rate_pct,avg_p_cycles,avg_f_cycles,avg_c_cycles,p_util_pct,f_util_pct,c_util_pct,bottleneck
+4ch,4,32768,0.0500,8,4,1638,583881,690964,1.1834,0.0000,8336.0000,71072.5000,6962.0000,11.4215,97.3794,9.5389,Memory Bound (DDR)
+8ch,8,32768,0.0500,8,4,1638,350655,457738,1.3054,0.0000,8336.0000,41919.2500,6962.0000,19.0181,95.6365,15.8834,Memory Bound (DDR)
+16ch,16,32768,0.0500,8,4,1638,185597,292680,1.5770,0.0000,8336.0000,21287.0000,6962.0000,35.9316,91.7558,30.0091,Memory Bound (DDR)
+32ch,32,32768,0.0500,8,4,1638,107995,215078,1.9916,0.0000,8336.0000,11586.7500,6962.0000,61.7510,85.8318,51.5728,Memory Bound (DDR)

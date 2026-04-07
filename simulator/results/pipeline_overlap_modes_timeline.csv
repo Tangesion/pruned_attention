@@ -1,0 +1,25 @@
+mode,num_channels,group_id,stage,start_cycle,end_cycle,duration_cycles
+P+F+C full pipeline,16,0,P,1,8337,8336
+P+F+C full pipeline,16,0,F,8338,29055,20717
+P+F+C full pipeline,16,0,C,29056,36018,6962
+P+F+C full pipeline,16,1,P,8337,16673,8336
+P+F+C full pipeline,16,1,F,29055,49615,20560
+P+F+C full pipeline,16,1,C,49616,56578,6962
+P+F+C full pipeline,16,2,P,16673,25009,8336
+P+F+C full pipeline,16,2,F,49615,71118,21503
+P+F+C full pipeline,16,2,C,71119,78081,6962
+P+F+C full pipeline,16,3,P,25009,33345,8336
+P+F+C full pipeline,16,3,F,71118,93119,22001
+P+F+C full pipeline,16,3,C,93120,100082,6962
+P+F+C full pipeline,16,4,P,33345,41681,8336
+P+F+C full pipeline,16,4,F,93119,115356,22237
+P+F+C full pipeline,16,4,C,115357,122319,6962
+P+F+C full pipeline,16,5,P,41681,50017,8336
+P+F+C full pipeline,16,5,F,115356,135916,20560
+P+F+C full pipeline,16,5,C,135917,142879,6962
+P+F+C full pipeline,16,6,P,50017,58353,8336
+P+F+C full pipeline,16,6,F,135916,158179,22263
+P+F+C full pipeline,16,6,C,158180,165142,6962
+P+F+C full pipeline,16,7,P,58353,66689,8336
+P+F+C full pipeline,16,7,F,158179,178634,20455
+P+F+C full pipeline,16,7,C,178635,185597,6962

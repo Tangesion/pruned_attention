@@ -24,12 +24,28 @@ public:
         BankMappingStrategy mapping_strategy;
     };
 
+    struct Stats {
+        size_t accepted_requests = 0;
+        size_t total_bytes = 0;
+        size_t total_bursts = 0;
+        size_t multi_burst_requests = 0;
+        size_t row_hits = 0;
+        size_t row_conflicts = 0;
+        size_t row_misses = 0;
+        std::vector<size_t> channel_accesses;
+        std::vector<size_t> channel_busy_cycles;
+        std::vector<size_t> bank_accesses;
+        std::vector<size_t> bank_busy_cycles;
+    };
+
     DDRController(Config config);
 
     bool send_request(const MemoryRequest& req) override;
     void step(size_t current_cycle) override;
     std::vector<MemoryRequest> pop_completed_requests() override;
     bool is_idle() const override;
+    const Stats& get_stats() const;
+    const Config& get_config() const;
 
 private:
     Config config;
@@ -41,10 +57,12 @@ private:
 
     // Organized as [Channel][Bank]
     std::vector<std::vector<BankState>> bank_states;
+    std::vector<size_t> channel_next_data_free_cycle;
 
     // Requests waiting for simulation time to pass
     std::deque<MemoryRequest> pending_requests;
     std::vector<MemoryRequest> completed_buffer;
+    Stats stats;
 
     // Helper to map address to physical location
     struct PhysAddr {
@@ -54,6 +72,7 @@ private:
         size_t col;
     };
     PhysAddr map_address(size_t address) const;
+    size_t flat_bank_index(uint32_t channel, uint32_t bank) const;
 };
 
 } // namespace Memory

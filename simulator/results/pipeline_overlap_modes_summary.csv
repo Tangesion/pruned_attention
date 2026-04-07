@@ -1,0 +1,5 @@
+mode,num_channels,context_length,sparsity_ratio,num_head_groups,heads_per_group,selected_kv_per_group,total_cycles,normalized_latency,speedup_vs_serial,avg_p_cycles,avg_f_cycles,avg_c_cycles,bubble_rate_pct
+Serial (No overlap),16,32768,0.0500,8,4,1638,292680,1.0000,1.0000,8336.0000,21287.0000,6962.0000,0.0000
+P+F overlap only,16,32768,0.0500,8,4,1638,234328,0.8006,1.2490,8336.0000,21287.0000,6962.0000,0.0000
+F+C overlap only,16,32768,0.0500,8,4,1638,243946,0.8335,1.1998,8336.0000,21287.0000,6962.0000,0.0000
+P+F+C full pipeline,16,32768,0.0500,8,4,1638,185597,0.6341,1.5770,8336.0000,21287.0000,6962.0000,0.0000

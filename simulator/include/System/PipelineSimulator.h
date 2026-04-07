@@ -54,6 +54,14 @@ struct PipelineConfig {
     // System Params
     double frequency_mhz;   // e.g., 200.0 for 200MHz
     size_t max_queue_size = 2; // Finite FIFO depth for backpressure simulation
+    bool verbose_logging = false;
+    bool use_realistic_stage_models = true;
+    bool use_hash_aware_fetch = false;
+    bool use_dual_fetch = false;
+    size_t fetch_num_lanes = 1;
+    size_t max_sgu_merge_bytes = 4096;
+    size_t fetch_max_inflight_bursts = 256;
+    size_t fetch_head_stride_padding_bytes = 0;
 
     // Model Params
     size_t context_length;
@@ -126,12 +134,9 @@ private:
     size_t f_stage_free_cycle = 0;
     size_t c_stage_free_cycle = 0;
 
-    // Scaling factors for F-Stage extrapolation
-    size_t f_num_reqs = 0;
-    size_t f_sim_count = 0;
-
     // Helper functions
     size_t calculate_p_latency(const HeadGroupTask& task);
+    size_t calculate_f_latency(const HeadGroupTask& task);
     size_t calculate_c_latency(const HeadGroupTask& task);
     // F-Latency is calculated dynamically via DDRController
 
